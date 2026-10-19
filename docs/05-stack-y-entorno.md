@@ -70,7 +70,7 @@ Verificación:
 
 ```powershell
 uv --version
-# uv 0.13.2
+# uv 0.13.1
 ```
 
 Y el PATH de uv en Windows vive en `%USERPROFILE%\.local\bin`. Si `uv` no se encuentra, agregá esa carpeta al PATH del sistema o abrí una terminal nueva.
@@ -173,7 +173,7 @@ Nuestro Dockerfile es **single-stage**: un solo `FROM`, sin etapas intermedias d
 ```dockerfile
 FROM python:3.13-slim
 
-COPY --from=ghcr.io/astral-sh/uv:0.13.2 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/
 
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
@@ -197,7 +197,7 @@ Instrucción por instrucción:
 | Instrucción | Qué hace | Por qué |
 |---|---|---|
 | `FROM python:3.13-slim` | Parte de la imagen oficial de Python 3.13 en su variante "slim" (sin herramientas de más) | Misma versión que localmente (`requires-python = ">=3.13"`); "slim" mantiene la imagen chica |
-| `COPY --from=ghcr.io/astral-sh/uv:0.13.2 /uv /uvx /bin/` | Copia los binarios de **uv 0.13.2** desde su propia imagen oficial adentro de la nuestra | Traemos uv sin instalarlo ni compilarlo; además fijamos la versión exacta |
+| `COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/` | Copia los binarios de **uv 0.13.1** desde su propia imagen oficial adentro de la nuestra | Traemos uv sin instalarlo ni compilarlo; además fijamos la versión exacta |
 | `ENV PYTHONUNBUFFERED=1` | Los prints salen inmediatamente a los logs | Si no, en `docker compose logs` los mensajes de Django quedan bufferizados y los ves tarde |
 | `ENV UV_COMPILE_BYTECODE=1` | uv compila los `.py` a `.pyc` | Arranque más rápido del contenedor |
 | `ENV UV_LINK_MODE=copy` | uv copia en vez de enlazar paquetes | Evita errores de "device or resource busy" en volúmenes |
@@ -552,4 +552,4 @@ c) No. `ruff format` solo reordena y recorta estilo (indentación, comillas, sal
 
 ---
 
-> **Para la defensa:** "El entorno está gestionado con uv 0.13.2 y su `uv.lock` congelado, que sirve igual en Windows y en Docker. La imagen es single-stage sobre python:3.13-slim con el binario de uv copiado desde su imagen oficial; el compose levanta PostgreSQL 17 con healthcheck y gunicorn 26.2.0 con whitenoise para los estáticos. Localmente desarrollo con `runserver` y pruebo con pytest; en el contenedor corre gunicorn como en producción."
+> **Para la defensa:** "El entorno está gestionado con uv 0.13.1 y su `uv.lock` congelado, que sirve igual en Windows y en Docker. La imagen es single-stage sobre python:3.13-slim con el binario de uv copiado desde su imagen oficial; el compose levanta PostgreSQL 17 con healthcheck y gunicorn 26.2.0 con whitenoise para los estáticos. Localmente desarrollo con `runserver` y pruebo con pytest; en el contenedor corre gunicorn como en producción."

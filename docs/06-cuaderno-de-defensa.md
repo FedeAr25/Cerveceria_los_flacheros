@@ -16,7 +16,7 @@ Este cuaderno es para vos, que hiciste el 100 por ciento del backend. Ema prepar
 
 Qué es Cervecería Los Flacheros: una API REST para administrar una cervecería artesanal. Estilos de cerveza, cervezas con stock, lotes de producción y sus etapas de fermentación, proveedores, materias primas, clientes, pedidos con sus líneas y opiniones de clientes. Tiene panel de administración completo, autenticación por sesión y por token, documentación automática con Swagger y ReDoc, y una vista de bienvenida en la raíz.
 
-Con qué está hecho: Django 5.2.18 LTS, Django REST Framework 3.17, drf-spectacular, django-filter, django-cors-headers, django-environ, psycopg v3, PostgreSQL 17 en Docker Compose, Python 3.13, gestionado con uv 0.13.2. El front es Next.js con App Router y Tailwind, pero Lemo no lo evalúa.
+Con qué está hecho: Django 5.2.18 LTS, Django REST Framework 3.17, drf-spectacular, django-filter, django-cors-headers, django-environ, psycopg v3, PostgreSQL 17 en Docker Compose, Python 3.13, gestionado con uv 0.13.1. El front es Next.js con App Router y Tailwind, pero Lemo no lo evalúa.
 
 Cuántas tablas y endpoints: 10 modelos en una sola app llamada core y 10 endpoints bajo /api/ (estilos, cervezas, lotes, etapas, proveedores, materias-primas, clientes, pedidos, lineas, opiniones), todos con ModelViewSet y router.
 
@@ -262,7 +262,7 @@ Detalle técnico: django.contrib.admin requiere autenticación. Los superusuario
 
 48. ¿Por qué usamos uv y no pip más venv?
 Respuesta hablada: Porque uv es mucho más rápido para crear el entorno virtual e instalar dependencias, y maneja todo con un solo archivo, pyproject.toml, más un archivo de bloqueo.
-Detalle técnico: uv 0.13.2. Comandos: uv init, uv add django djangorestframework drf-spectacular django-filter django-cors-headers django-environ psycopg-binary gunicorn whitenoise pytest pytest-django ruff, y uv run python manage.py <comando>. Se decidió en la fase de entorno, al arrancar el proyecto el 19 de octubre de 2026.
+Detalle técnico: uv 0.13.1. Comandos: uv init, uv add django djangorestframework drf-spectacular django-filter django-cors-headers django-environ psycopg-binary gunicorn whitenoise pytest pytest-django ruff, y uv run python manage.py <comando>. Se decidió en la fase de entorno, al arrancar el proyecto el 19 de octubre de 2026.
 
 49. ¿Qué es pyproject.toml?
 Respuesta hablada: Es el archivo donde se declaran las dependencias del proyecto y sus versiones, reemplazando al requirements.txt clásico.

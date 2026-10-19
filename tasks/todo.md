@@ -15,7 +15,7 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 **Criterios de aceptación:**
 - [ ] `uv` instalado (`winget install --id=astral-sh.uv -e` o `irm https://astral.sh/uv/install.ps1 | iex`)
 - [ ] Docker Desktop instalado y en ejecución (icono en la bandeja)
-- [ ] Terminal NUEVA abierta: `uv --version` devuelve `0.13.2`
+- [ ] Terminal NUEVA abierta: `uv --version` devuelve `0.13.1`
 - [ ] `docker --version` y `docker compose version` responden sin errores
 
 **Verificación:**
@@ -477,7 +477,7 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 **Descripción:** Escribir el Dockerfile single-stage con uv y el `compose.yaml` con Postgres 17, healthcheck y comando de arranque. Concepto de Django en juego: **punto de entrada WSGI** — el contenedor no usa `runserver` sino `gunicorn config.wsgi:application`, el servidor de producción que carga el `wsgi.py` del proyecto.
 
 **Criterios de aceptación:**
-- [ ] Dockerfile single-stage sobre `python:3.13-slim`, copiando `uv`/`uvx` desde `ghcr.io/astral-sh/uv:0.13.2`, sin `--mount=type=cache`
+- [ ] Dockerfile single-stage sobre `python:3.13-slim`, copiando `uv`/`uvx` desde `ghcr.io/astral-sh/uv:0.13.1`, sin `--mount=type=cache`
 - [ ] `uv sync --frozen --no-install-project --no-dev` y después `uv sync --frozen --no-dev`
 - [ ] `compose.yaml` con `db` (postgres:17 + healthcheck `pg_isready`) y `web` (`depends_on: condition: service_healthy`)
 - [ ] Comando `web`: `migrate` + `collectstatic --noinput` + `gunicorn`

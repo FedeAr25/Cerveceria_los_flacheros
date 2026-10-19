@@ -93,7 +93,7 @@ La plantilla vive en [`docs/tareas/_plantilla.md`](tareas/_plantilla.md). Se usa
 | ¿Por qué PostgreSQL y no SQLite? | `01-django-esencial.md` §11 + `05-stack-y-entorno.md` |
 | Comandos de Django que usan | `01-django-esencial.md` §12 |
 | "Te falló algo, ¿cómo lo debugueás?" | `01-django-esencial.md` §13 |
-| Serializers, ViewSets, nested, `@action`, permisos, paginación, filtros | `02-drf-esencial.md` (por escribir; mientras, `tasks/plan.md` §8) |
+| Serializers, ViewSets, nested, `@action`, permisos, paginación, filtros | `02-drf-esencial.md` |
 | ¿Qué es HTTP? ¿Qué es JSON? ¿Qué es CORS? | `03-http-json-cors.md` |
 | Cookies, token vs sesión, CSRF | `03-http-json-cors.md` + `tasks/api-contract.md` |
 | uv, Docker, Compose, `gunicorn`, `collectstatic` | `05-stack-y-entorno.md` |
