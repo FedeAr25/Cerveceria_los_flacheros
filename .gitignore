@@ -1,0 +1,26 @@
+# Entornos y Python
+.venv/
+__pypackages__/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Django
+*.sqlite3
+db.sqlite3
+staticfiles/
+media/
+
+# Secretos
+.env
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend (Next.js)
+node_modules/
+.next/
+out/
+.env.local

@@ -1,0 +1,24 @@
+# El .venv local es de Windows y rompería la imagen Linux
+.venv/
+__pypackages__/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+.git/
+.gitignore
+
+# Secretos: la imagen se arma con variables de entorno, nunca con el .env
+.env
+
+*.sqlite3
+db.sqlite3
+staticfiles/
+media/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+README.md

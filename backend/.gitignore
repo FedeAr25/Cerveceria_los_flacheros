@@ -1,0 +1,29 @@
+# Entornos virtuales
+.venv/
+__pypackages__/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Django
+*.sqlite3
+db.sqlite3
+staticfiles/
+media/
+*.log
+
+# Secretos
+.env
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend (por si se commitea desde acá)
+node_modules/
+.next/
