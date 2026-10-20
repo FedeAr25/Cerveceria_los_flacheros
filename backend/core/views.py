@@ -115,7 +115,19 @@ class CervezaViewSet(CatalogoViewSet):
 
     @action(detail=False, methods=["GET"], url_path="en_grifo")
     def en_grifo(self, request):
-        queryset = self.get_queryset().filter(tipo="GRIFO", activo=True, stock__gt=0)
+        """Cervezas de grifo activas y con stock > 0, paginadas.
+
+        Misma forma que cualquier listado de cervezas (`count`, `next`,
+        `previous`, `results` con `CervezaSerializer`). Es lo que consume el
+        frontend para llenar la pantalla del grifo.
+        """
+        queryset = (
+            self.get_queryset()
+            .filter(tipo="GRIFO", activo=True, stock__gt=0)
+            # Orden explícito: paginar un queryset sin ordenar avisa que los
+            # resultados pueden ser inconsistentes entre páginas.
+            .order_by("-fecha_creacion")
+        )
         # paginate_queryset y get_paginated_response respetan la paginación
         # global: la respuesta tiene la misma forma que cualquier listado.
         page = self.paginate_queryset(queryset)
@@ -163,6 +175,16 @@ class LoteViewSet(CatalogoViewSet):
         permission_classes=[IsAdminUser],
     )
     def avanzar(self, request, pk=None):
+        """Avanza el lote un paso en la máquina de estados (solo staff).
+
+        POST sin body: `PLANIFICADO → EN_PRODUCCION → FERMENTACION →
+        MADURACION → LISTO`, un paso por vez. Acepta opcionalmente
+        `{"estado": "..."}` para pedir un salto concreto, que se valida con
+        `Lote.puede_avanzar_a()`: un salto inválido responde `400`, igual
+        que intentar avanzar desde un estado terminal (`LISTO`, `CANCELADO`).
+        La consume el frontend (pantalla de producción) para mover lotes sin
+        editar el estado a mano.
+        """
         lote = self.get_object()
         # Acepta opcionalmente {"estado": "..."} para pedir un salto concreto;
         # sin body avanza un paso a el siguiente de la máquina de estados.
@@ -255,6 +277,14 @@ class PedidoViewSet(MostradorViewSet):
         permission_classes=[IsAdminUser],
     )
     def estadisticas(self, request):
+        """Métricas agregadas de pedidos, solo staff.
+
+        Devuelve `total_pedidos`, `monto_total` (suma de `Pedido.total`),
+        `pedidos_por_estado` (estado → cantidad) y `promedio_ticket`,
+        calculados con el ORM (`Count`, `Sum`, `Avg` y
+        `values().annotate()`). Si no hay pedidos cargados, `monto_total` y
+        `promedio_ticket` vienen `null`.
+        """
         queryset = self.get_queryset()
         totales = queryset.aggregate(monto=Sum("total"), promedio=Avg("total"))
         por_estado = {
