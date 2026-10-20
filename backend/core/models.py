@@ -166,3 +166,66 @@ class EtapaFermentacion(models.Model):
 
     def __str__(self):
         return f"Etapa {self.numero} ({self.get_tipo_display()}) — {self.lote}"
+
+
+class Proveedor(models.Model):
+    """El que nos vende materia prima: malta, lúpulo, levadura."""
+
+    razon_social = models.CharField("razón social", max_length=150)
+    cuit = models.CharField("CUIT", max_length=20, unique=True)
+    email = models.EmailField("email", blank=True)
+    telefono = models.CharField("teléfono", max_length=20, blank=True)
+    activo = models.BooleanField("activo", default=True)
+
+    class Meta:
+        verbose_name = "proveedor"
+        verbose_name_plural = "proveedores"
+
+    def __str__(self):
+        return self.razon_social
+
+
+class MateriaPrima(models.Model):
+    """Insumo del depósito: malta, lúpulo, levadura u otro."""
+
+    class Tipo(models.TextChoices):
+        MALTA = "MALTA", "Malta"
+        LUPULO = "LUPULO", "Lúpulo"
+        LEVADURA = "LEVADURA", "Levadura"
+        OTROS = "OTROS", "Otros"
+
+    class Unidad(models.TextChoices):
+        KG = "KG", "Kilogramo"
+        G = "G", "Gramo"
+        LT = "LT", "Litro"
+        UNIDAD = "UNIDAD", "Unidad"
+
+    nombre = models.CharField("nombre", max_length=150)
+    tipo = models.CharField("tipo", max_length=10, choices=Tipo.choices)
+    unidad = models.CharField(
+        "unidad", max_length=10, choices=Unidad.choices, default=Unidad.KG
+    )
+    stock = models.DecimalField("stock", max_digits=10, decimal_places=2, default=0)
+    stock_minimo = models.DecimalField(
+        "stock mínimo", max_digits=10, decimal_places=2, default=0
+    )
+    costo_unitario = models.DecimalField(
+        "costo unitario", max_digits=10, decimal_places=2, default=0
+    )
+    # SET_NULL: la materia prima sigue existiendo aunque el proveedor se dé de
+    # baja; solo desenganchamos el vínculo.
+    proveedor = models.ForeignKey(
+        Proveedor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="materias_primas",
+        verbose_name="proveedor",
+    )
+
+    class Meta:
+        verbose_name = "materia prima"
+        verbose_name_plural = "materias primas"
+
+    def __str__(self):
+        return self.nombre
