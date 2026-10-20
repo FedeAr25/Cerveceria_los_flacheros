@@ -377,4 +377,6 @@ class Opinion(models.Model):
         verbose_name_plural = "opiniones"
 
     def __str__(self):
-        return f"{self.get_puntaje_display()}★ — {self.cerveza}"
+        # `puntaje` es un IntegerField con validators, no un campo con choices: por eso
+        # no existe get_puntaje_display() (Django solo lo genera para campos con choices).
+        return f"{self.puntaje}★ — {self.cerveza}"
