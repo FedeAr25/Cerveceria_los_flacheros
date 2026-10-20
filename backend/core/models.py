@@ -7,6 +7,7 @@ y feedback (Opinion).
 """
 
 from django.contrib.auth.models import User
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -229,3 +230,151 @@ class MateriaPrima(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class Cliente(models.Model):
+    """La persona que nos compra: ficha con DNI y mail únicos."""
+
+    nombre = models.CharField("nombre", max_length=100)
+    apellido = models.CharField("apellido", max_length=100)
+    email = models.EmailField("email", unique=True)
+    telefono = models.CharField("teléfono", max_length=20, blank=True)
+    dni = models.CharField("DNI", max_length=20, unique=True, null=True, blank=True)
+    activo = models.BooleanField("activo", default=True)
+    fecha_alta = models.DateTimeField("fecha de alta", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "cliente"
+        verbose_name_plural = "clientes"
+
+    def __str__(self):
+        return self.nombre_completo
+
+    @property
+    def nombre_completo(self):
+        """No es columna de la base: es un atributo calculado que el
+        serializer expone como si fuera un campo (solo lectura)."""
+        return f"{self.nombre} {self.apellido}".strip()
+
+
+class Pedido(models.Model):
+    """La orden de venta a un cliente: cabecera con su estado y total."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        CONFIRMADO = "CONFIRMADO", "Confirmado"
+        EN_PREPARACION = "EN_PREPARACION", "En preparación"
+        LISTO_RETIRO = "LISTO_RETIRO", "Listo para retiro"
+        ENTREGADO = "ENTREGADO", "Entregado"
+        CANCELADO = "CANCELADO", "Cancelado"
+
+    class FormaPago(models.TextChoices):
+        EFECTIVO = "EFECTIVO", "Efectivo"
+        TARJETA = "TARJETA", "Tarjeta"
+        TRANSFERENCIA = "TRANSFERENCIA", "Transferencia"
+
+    fecha = models.DateTimeField("fecha", auto_now_add=True)
+    estado = models.CharField(
+        "estado", max_length=20, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    forma_pago = models.CharField(
+        "forma de pago",
+        max_length=15,
+        choices=FormaPago.choices,
+        default=FormaPago.EFECTIVO,
+    )
+    # `total` es un campo GUARDADO, no se recalcula en cada respuesta: lo
+    # calcula la capa de API (serializers, Fase 4) al crear el pedido. Por eso
+    # el contrato con el frontend lo congela al crear el pedido: si cambian los
+    # precios después, el total del histórico no se mueve.
+    total = models.DecimalField("total", max_digits=10, decimal_places=2, default=0)
+    direccion_entrega = models.CharField(
+        "dirección de entrega", max_length=255, blank=True
+    )
+    observaciones = models.TextField("observaciones", blank=True)
+    # PROTECT: un pedido sin cliente pierde sentido comercial; no se puede
+    # borrar un cliente que tiene pedidos.
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.PROTECT,
+        related_name="pedidos",
+        verbose_name="cliente",
+    )
+
+    class Meta:
+        verbose_name = "pedido"
+        verbose_name_plural = "pedidos"
+
+    def __str__(self):
+        return f"Pedido {self.pk} — {self.cliente}"
+
+
+class LineaPedido(models.Model):
+    """Cada renglón del pedido: qué cerveza, con qué cantidad y precio."""
+
+    cantidad = models.IntegerField("cantidad", default=1)
+    precio_unitario = models.DecimalField(
+        "precio unitario", max_digits=10, decimal_places=2
+    )
+    # CASCADE: las líneas son parte del pedido; si desaparece el pedido, sus
+    # renglones quedan huérfanos, así que se borran con él.
+    pedido = models.ForeignKey(
+        Pedido, on_delete=models.CASCADE, related_name="lineas", verbose_name="pedido"
+    )
+    # PROTECT: una venta registrada no se reescribe borrando la cerveza; el
+    # histórico se protege.
+    cerveza = models.ForeignKey(
+        Cerveza,
+        on_delete=models.PROTECT,
+        related_name="lineas_pedido",
+        verbose_name="cerveza",
+    )
+
+    class Meta:
+        verbose_name = "línea de pedido"
+        verbose_name_plural = "líneas de pedido"
+
+    def __str__(self):
+        return f"{self.cantidad} x {self.cerveza}"
+
+    @property
+    def subtotal(self):
+        """Cálculo (no columna): cantidad × precio unitario. El serializer lo
+        expone como campo de solo lectura."""
+        return self.cantidad * self.precio_unitario
+
+
+class Opinion(models.Model):
+    """Reseña de un cliente sobre una cerveza: puntaje 1-5 y comentario."""
+
+    # Los validators rechazan un puntaje fuera de 1-5 en `full_clean()` y en
+    # el serializer (que llama a `full_clean`): sin ellos, un 0 o un 9 entraría
+    # silenciosamente a la base.
+    puntaje = models.IntegerField(
+        "puntaje",
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    comentario = models.TextField("comentario", blank=True)
+    fecha = models.DateTimeField("fecha", auto_now_add=True)
+    # CASCADE: una opinión no sobrevive a la cerveza que comenta.
+    cerveza = models.ForeignKey(
+        Cerveza,
+        on_delete=models.CASCADE,
+        related_name="opiniones",
+        verbose_name="cerveza",
+    )
+    # CASCADE: una opinión no sobrevive a quien la escribió.
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name="opiniones",
+        verbose_name="cliente",
+    )
+
+    class Meta:
+        verbose_name = "opinión"
+        verbose_name_plural = "opiniones"
+
+    def __str__(self):
+        return f"{self.get_puntaje_display()}★ — {self.cerveza}"
