@@ -147,6 +147,21 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API REST de gestión de cervecería artesanal.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Sin esto, dos choice sets que comparten nombre de campo (p. ej. "estado"
+    # en Lote y Pedido) colisionan y drf-spectacular les pone nombres
+    # autogenerados tipo "EstadoD9aEnum" en Swagger UI. Cada entrada
+    # {nombre_en_el_schema: ruta_python} fija un nombre legible. Las rutas de
+    # enums anidados en un modelo son "app.Modelo.Clase".
+    "ENUM_NAME_OVERRIDES": {
+        "EstadoLote": "core.models.Lote.Estado",
+        "EstadoPedido": "core.models.Pedido.Estado",
+        "EstadoEtapa": "core.models.EtapaFermentacion.Estado",
+        "TipoCerveza": "core.models.Cerveza.Tipo",
+        "TipoEtapa": "core.models.EtapaFermentacion.Tipo",
+        "TipoMateriaPrima": "core.models.MateriaPrima.Tipo",
+        "UnidadMateriaPrima": "core.models.MateriaPrima.Unidad",
+        "FormaPagoPedido": "core.models.Pedido.FormaPago",
+    },
 }
 
 # Origen del frontend (Next.js, puerto 3000). Restringido a propósito:
