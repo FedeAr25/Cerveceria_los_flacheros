@@ -83,32 +83,35 @@ Y el PATH de uv en Windows vive en `%USERPROFILE%\.local\bin`. Si `uv` no se enc
 
 Es el archivo de declaraciones del proyecto: qué dependencias necesita, con qué versión de Python, y cómo se configuran las herramientas. Es el archivo estándar de Python desde PEP 621.
 
-Nuestro `pyproject.toml` tiene estas secciones:
+Nuestro `pyproject.toml` es exactamente este (el real del repo, en `backend/pyproject.toml`):
 
 ```toml
 [project]
-name = "backend"
+name = "cerveceria-backend"
 version = "0.1.0"
+description = "Backend Django + DRF de Cervecería Los Flacheros — EFI Ingeniería de Software 2026"
+readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "django>=5.2,<5.3",
-    "djangorestframework>=3.17,<3.18",
-    "drf-spectacular>=0.28",
-    "django-filter>=25.1",
-    "django-cors-headers>=5.0",
-    "psycopg[binary]>=3.2",
-    "whitenoise>=6.12",
-    "gunicorn>=26.2",
-    "dj-database-url>=3.0",
+    "django==5.2.18",
+    "djangorestframework>=3.16,<3.18",
+    "drf-spectacular>=0.30.0",
+    "django-filter>=26.2",
+    "django-cors-headers>=4.9.0",
+    "django-environ>=0.14.0",
+    "psycopg[binary]>=3.3.6",
+    "gunicorn>=26.2.0",
+    "whitenoise>=6.12.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1",
-    "pytest-django>=4.14",
-    "ruff>=0.17",
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+    "ruff>=0.17.1",
 ]
 
+# Un proyecto Django no es un paquete distribuible. Con package = false, uv no intenta construirlo al instalar.
 [tool.uv]
 package = false
 
@@ -117,21 +120,23 @@ line-length = 88
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "UP", "B", "DJ"]
 
+# pytest-django necesita saber qué módulo de settings usar.
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
-python_files = ["tests.py", "test_*.py"]
+python_files = ["test_*.py", "tests.py"]
+testpaths = ["core"]
 ```
 
 Qué significa cada cosa:
 
 - **`[project]`**: identidad y dependencias de producción. Estas van a producción y a Docker.
-- **`dependencies`**: lo que el backend necesita para funcionar: Django 5.2 LTS, DRF 3.17.x, drf-spectacular (documentación OpenAPI), django-filter (filtros), django-cors-headers (CORS), psycopg (driver de PostgreSQL), whitenoise y gunicorn.
+- **`dependencies`**: lo que el backend necesita para funcionar: Django 5.2 LTS, DRF 3.17.x, drf-spectacular (documentación OpenAPI), django-filter (filtros), django-cors-headers (CORS), django-environ (settings 12-factor: lee el `.env` y arma `DATABASES`), psycopg (driver de PostgreSQL), whitenoise y gunicorn. **No hay `dj-database-url`**: esa tarea la hace django-environ.
 - **`[dependency-groups]` con `dev`**: herramientas **solo de desarrollo**: pytest, pytest-django y ruff. No van a producción; por eso Docker instala con `--no-dev`.
 - **`[tool.uv] package = false`**: dice que este proyecto **no es un paquete instalable**. Un proyecto Django es un código que se ejecuta, no una librería que otros importan desde PyPI. Sin esto, `uv sync` intenta construir e instalar el propio proyecto y falla porque no hay `build-system` ni módulo del mismo nombre. Es la línea que más gente se saltea y la que más rompe.
-- **`[tool.ruff]`**: configuración del linter/formatter: ancho de línea 88 y objetivo Python 3.13.
-- **`[tool.pytest.ini_options]`**: le dice a pytest dónde viven los settings de Django (`config.settings`) y cómo reconocer archivos de tests.
+- **`[tool.ruff]`**: configuración del linter/formatter: ancho de línea 88, objetivo Python 3.13 y reglas `E`, `F`, `I`, `UP`, `B`, `DJ` (la `DJ` incluye reglas específicas de Django).
+- **`[tool.pytest.ini_options]`**: le dice a pytest dónde viven los settings de Django (`config.settings`), cómo reconocer archivos de tests y dónde buscarlos (`testpaths = ["core"]`).
 
 ---
 
@@ -189,8 +194,10 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uv run python manage.py collectstatic --noinput && uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
 ```
+
+Nota: el `CMD` arranca **solo gunicorn**. Las migraciones y el `collectstatic` no van acá: los corre el `command` del `compose.yaml` (sección siguiente), que es quien orquesta el arranque completo del stack.
 
 Instrucción por instrucción:
 
@@ -207,7 +214,7 @@ Instrucción por instrucción:
 | `RUN uv sync --frozen --no-dev --no-install-project` | Instala las dependencias de `uv.lock` tal cual | `--frozen` no deja que uv modifique el lockfile; `--no-dev` deja afuera pytest y ruff; `--no-install-project` no intenta instalar el proyecto (porque es `package = false`) |
 | `COPY . .` | Copia el código del backend | El código va **después** de las dependencias |
 | `EXPOSE 8000` | Documenta que el contenedor escucha en el puerto 8000 | No abre nada por sí solo; es documentación para el compose |
-| `CMD` | Lo que corre al arrancar el contenedor | Primero `collectstatic`, después gunicorn |
+| `CMD` | Lo que corre al arrancar el contenedor | Arranca gunicorn; `migrate` y `collectstatic` los ejecuta el `command` del compose |
 
 ### Por qué el cache de la capa de dependencias funciona
 
@@ -237,21 +244,19 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flacheros} -d ${POSTGRES_DB:-flacheros}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   web:
     build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-flacheros}:${POSTGRES_PASSWORD:-flacheros}@db:5432/${POSTGRES_DB:-flacheros}
     ports:
       - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgres:// ${POSTGRES_USER:-flacheros}:${POSTGRES_PASSWORD:-flacheros}@db:5432/${POSTGRES_DB:-flacheros}
-    volumes:
-      - .:/app
     depends_on:
       db:
         condition: service_healthy
+    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
 
 volumes:
   postgres_data:
@@ -262,6 +267,8 @@ Conceptos:
 - **Servicios**: cada bloque es un contenedor con su configuración. `db` y `web`.
 - **`depends_on` + `condition: service_healthy`**: "no arranques `web` hasta que `db` esté sano". Sin la condición, Django intentaría conectarse a Postgres antes de que Postgres esté listo y el primer `migrate` fallaría. Es el error clásico del "first run".
 - **`healthcheck` con `pg_isready`**: el contenedor de Postgres responde a ese comando cuando está aceptando conexiones. Es el semáforo que usa `depends_on`.
+- **`command` de `web`**: corre `migrate` (aplica las migraciones en cada arranque), después `collectstatic --noinput` (junta los estáticos del admin para whitenoise) y recién entonces arranca gunicorn. Es el orden real de despliegue de un Django.
+- **`DATABASE_URL`**: dentro de Compose el backend habla con `db:5432` (el nombre del servicio como hostname), **sin espacios** en la URL: un espacio después de `postgres://` rompe el parseo y Django no conecta.
 - **Volúmenes**: `postgres_data` guarda los datos de la base de fuera del ciclo de vida del contenedor. `docker compose down` no borra los datos; `down -v` sí.
 - **`env_file`**: lee el archivo `.env` (copia de `.env.example`, con tus valores). Ahí viven `DJANGO_SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `POSTGRES_*` y `CORS_ALLOWED_ORIGINS`.
 - **`${VAR:-default}`**: usa la variable `VAR` si existe; si no, usa el valor por defecto de la derecha. Así el compose anda sin `.env` para arrancar.
@@ -303,7 +310,7 @@ DATABASE_URL=sqlite:///db.sqlite3
 DATABASE_URL=postgres://flacheros:flacheros@db:5432/flacheros
 ```
 
-El código de `config/settings.py` lee esa variable con `dj-database-url` y arma el `DATABASES`. Ninguna vista, modelo ni serializer se entera.
+El código de `config/settings.py` lee esa variable con **django-environ** (`env.db()` / `env.db_url()`) y arma el `DATABASES`. Ninguna vista, modelo ni serializer se entera.
 
 ---
 
@@ -348,15 +355,15 @@ MIDDLEWARE = [
 ]
 ```
 
-Y el `CMD` del contenedor:
+Y el `command` del compose (no el `CMD` del Dockerfile):
 
 ```
-uv run python manage.py collectstatic --noinput && uv run gunicorn ...
+python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000
 ```
 
-¿Por qué `collectstatic` va **antes** de gunicorn en el mismo comando? Porque whitenoise sirve la carpeta `staticfiles/`, y esa carpeta no existe hasta que se ejecuta `collectstatic`. El `--no-input` evita la pregunta interactiva de "¿sobrescribo?" para que el contenedor arranque solo.
+¿Por qué `collectstatic` va **antes** de gunicorn en el mismo comando? Porque whitenoise sirve la carpeta `staticfiles/`, y esa carpeta no existe hasta que se ejecuta `collectstatic`. El `--noinput` evita la pregunta interactiva de "¿sobrescribo?" para que el contenedor arranque solo.
 
-> **Para la defensa:** "whitenoise sirve los archivos estáticos desde el mismo proceso de gunicorn, sin servicios extra. `collectstatic` junta los estáticos del admin y los nuestros en `STATIC_ROOT`, y por eso corre antes de arrancar gunicorn en el comando del contenedor."
+> **Para la defensa:** "whitenoise sirve los archivos estáticos desde el mismo proceso de gunicorn, sin servicios extra. `collectstatic` junta los estáticos del admin y los nuestros en `STATIC_ROOT`, y por eso corre antes de arrancar gunicorn en el `command` del compose."
 
 ---
 

@@ -20,10 +20,12 @@ Con qué está hecho: Django 5.2.18 LTS, Django REST Framework 3.17, drf-spectac
 
 Cuántas tablas y endpoints: 10 modelos en una sola app llamada core y 10 endpoints bajo /api/ (estilos, cervezas, lotes, etapas, proveedores, materias-primas, clientes, pedidos, lineas, opiniones), todos con ModelViewSet y router.
 
-Qué lo hace diferente: se entregó justo lo que pide la consigna, nada de más. Exactamente 10 modelos y 10 endpoints. Stock como campo numérico en Cerveza y MateriaPrima sin entidad aparte. Usuario de Django sin customizar. Sin imágenes. Token nativo de DRF en vez de JWT. Permisos declarativos. Git solo local. Docker para la base de datos.
+Qué lo hace diferente: se entregó justo lo que pide la consigna, nada de más. Exactamente 10 modelos y 10 endpoints. Stock como campo numérico en Cerveza y MateriaPrima sin entidad aparte. Usuario de Django sin customizar. Sin imágenes. Token nativo de DRF en vez de JWT. Permisos declarativos (lectura = cualquier autenticado; escritura = staff, salvo pedidos y líneas, que son el mostrador). Git local con publicación final en GitHub (Task 31). Docker para la base de datos.
 
 Marca: lema *Arte en cada trago, tradición en cada lote*. Colores: ámbar #F5A623, lúpulo #4A7C59, malta tostada #8B4513, espuma #F7F7F7, carbón #2B2B2B.
-## 3. Las 17 consignas del docente y cómo demostrar cada una
+## 3. Las consignas del docente y cómo demostrar cada una
+
+> La numeración oficial de requisitos es **R1–R21** y vive en [`docs/08-trazabilidad-requisitos.md`](08-trazabilidad-requisitos.md); ahí está la matriz completa con evidencia. Esta tabla agrupa las consignas en las filas que se demuestran en vivo.
 
 | # | Consigna | Dónde se cumple en el proyecto | Cómo lo demuestro (comando o URL) | Qué digo |
 |---|----------|-------------------------------|-----------------------------------|----------|
@@ -32,8 +34,8 @@ Marca: lema *Arte en cada trago, tradición en cada lote*. Colores: ámbar #F5A6
 | 3 | API REST con al menos 8 de 10 modelos vía ViewSet | core/views.py: 10 ModelViewSet y DefaultRouter bajo /api/ | GET /api/cervezas/ y los otros nueve endpoints | Los 10 modelos están expuestos por API REST con ModelViewSet, así que cubro el mínimo de 8 con sobra. |
 | 4 | Al menos 2 ViewSets CRUD con datos anidados solo en list (serializers anidados) | LoteViewSet y PedidoViewSet con get_serializer_class | GET /api/lotes/ devuelve etapas anidadas; GET /api/lotes/1/ devuelve plano. Igual con pedidos y líneas. | El anidado solo va en list: al listar lotes veo sus etapas, y al listar pedidos veo sus líneas. Al recuperar uno solo, el payload es plano. |
 | 5 | Endpoints protegidos con autenticación de sesión y por token | settings.py: SessionAuthentication y TokenAuthentication; POST /api/auth-token/ | POST /api/auth-token/ devuelve el token y luego se usa en el encabezado Authorization: Token <key> | La API acepta sesión y token. Para el front usamos token porque las cookies ignoran el puerto y se compartirían entre localhost:3000 y localhost:8000. |
-| 6 | Al menos 2 funciones personalizadas con @action | /api/cervezas/en_grifo/ y /api/pedidos/estadisticas/ (más la opcional POST /api/lotes/{id}/avanzar/) | Consultar /api/cervezas/en_grifo/ y /api/pedidos/estadisticas/ | Tengo dos acciones personalizadas: cervezas en grifo (lista pública) y estadísticas de pedidos (solo administradores). |
-| 7 | Endpoints de get all paginados | settings.py: PageNumberPagination, PAGE_SIZE=10, page_size_query_param y max_page_size=50 | GET /api/cervezas/?page=2 y verificar las claves next, previous y results | Todos los listados están paginados globalmente de a 10, con opción de cambiar el tamaño hasta 50. |
+| 6 | Al menos 2 funciones personalizadas con @action | /api/cervezas/en_grifo/ y /api/pedidos/estadisticas/ (más /api/lotes/{id}/avanzar/, comprometida en la Fase 4) | Consultar /api/cervezas/en_grifo/ y /api/pedidos/estadisticas/ | Tengo dos acciones personalizadas: cervezas en grifo (lista pública) y estadísticas de pedidos (solo administradores); además avanzar lotes con POST /api/lotes/{id}/avanzar/. |
+| 7 | Endpoints de get all paginados | settings.py: clase propia DefaultPagination (page_size=10, page_size_query_param="page_size", max_page_size=50) | GET /api/cervezas/?page=2 y verificar las claves next, previous y results | Todos los listados están paginados globalmente de a 10, con opción de cambiar el tamaño hasta 50. |
 | 8 | Al menos 1 ViewSet con filtros y búsquedas | CervezaViewSet con DjangoFilterBackend, SearchFilter y OrderingFilter | GET /api/cervezas?estilo=1&search=ipa&ordering=-precio | Cerveza se filtra por estilo y precio, se busca por nombre y se ordena por cualquier campo. |
 | 9 | Endpoints de documentación (openapi, swagger, redoc) y API navegable | drf-spectacular: /api/schema/, /api/schema/swagger-ui/, /api/schema/redoc/ y browsable API | Abrir /api/schema/swagger-ui/ y /api/ en el navegador | La documentación se genera sola con OpenAPI y tiene Swagger UI, ReDoc y la API navegable de DRF. |
 | 10 | Vista principal que renderice un template de bienvenida | core/views.py: vista para la ruta / y el template de bienvenida | Abrir http://localhost:8000/ en el navegador | La raíz muestra una vista de bienvenida con la identidad de marca de Los Flacheros. |
@@ -185,7 +187,7 @@ En LoteViewSet y PedidoViewSet. Así el anidado solo aparece en GET /api/lotes/ 
 
 32. ¿Qué es @action y qué es detail?
 Respuesta hablada: @action permite agregar endpoints personalizados a un ViewSet que no siguen el CRUD estándar. detail=False significa que actúa sobre la colección, como /cervezas/en_grifo/, y detail=True significa que actúa sobre un registro concreto, como /lotes/1/avanzar/.
-Detalle técnico: Tres acciones: GET /api/cervezas/en_grifo/ (detail=False), GET /api/pedidos/estadisticas/ (detail=False, permiso IsAdminUser) y POST /api/lotes/{id}/avanzar/ (detail=True, opcional).
+Detalle técnico: Tres acciones: GET /api/cervezas/en_grifo/ (detail=False), GET /api/pedidos/estadisticas/ (detail=False, permiso IsAdminUser) y POST /api/lotes/{id}/avanzar/ (detail=True, permiso IsAdminUser, valida la transición de estado).
 
 33. ¿Qué es la API navegable (browsable API)?
 Respuesta hablada: Es la interfaz web de Django REST Framework que te permite navegar por la API y hacer peticiones desde el navegador, sin necesidad de un cliente externo.
@@ -212,7 +214,7 @@ Detalle técnico: Usamos DjangoFilterBackend, SearchFilter y OrderingFilter. En 
 
 37. ¿Cuál es la diferencia entre autenticación y autorización?
 Respuesta hablada: Autenticación es saber quién sos (iniciar sesión o presentar un token). Autorización es saber si tenés permiso para hacer una acción, como ver, crear o borrar.
-Detalle técnico: Autenticación con SessionAuthentication y TokenAuthentication. Autorización con IsAuthenticated, IsAdminOrReadOnly e IsAdminUser declarados en cada ViewSet o globalmente.
+Detalle técnico: Autenticación con SessionAuthentication y TokenAuthentication. Autorización con IsAuthenticated para la lectura (cualquier autenticado; GET sin token = 401 en todos los endpoints) e IsAdminUser para la escritura, excepto Pedido y LineaPedido (el mostrador), y además en la acción estadisticas.
 
 38. ¿Qué es una sesión en Django?
 Respuesta hablada: Es una forma de recordar al usuario entre peticiones, guardando su identidad en el servidor y enviando una cookie al navegador.
@@ -256,7 +258,7 @@ Detalle técnico: TokenAuthentication valida la clave contra la tabla authtoken_
 
 47. ¿Cómo se protege el admin de Django?
 Respuesta hablada: El admin solo lo pueden usar usuarios autenticados con permiso de staff, y se accede por /admin/ después de iniciar sesión.
-Detalle técnico: django.contrib.admin requiere autenticación. Los superusuarios se crean con uv run python manage.py createsuperuser. Los ViewSets de estilos y proveedores usan IsAdminOrReadOnly para que solo administradores puedan modificar.
+Detalle técnico: django.contrib.admin requiere autenticación. Los superusuarios se crean con uv run python manage.py createsuperuser. En la API, la escritura de catálogos e insumos usa IsAdminUser (solo administradores); la lectura es de cualquier usuario autenticado.
 
 ### E. Proceso, herramientas y Git
 
@@ -306,7 +308,7 @@ Detalle técnico: ruff 0.17.1. Se corre con uv run ruff check . y uv run ruff fo
 
 57. ¿Cómo se trabajó con ramas y commits?
 Respuesta hablada: Cada funcionalidad se hizo en una rama feature (por ejemplo feature/modelos, feature/api, feature/docker), con commits descriptivos en español, y se fusionó a main con git merge --no-ff para conservar el historial de cada rama.
-Detalle técnico: Ramas locales únicamente, sin servidor remoto público; la publicación del proyecto la hace el usuario por su cuenta. Commits tipo: feat: agregar modelos de cervecería, fix: corregir permiso en estadísticas.
+Detalle técnico: Ramas locales con merges --no-ff a main; en la Task 31 (1/11) se publica el repo en GitHub y cada rama feature/* se sube como pull request hacia main. Commits tipo: feat: agregar modelos de cervecería, fix: corregir permiso en estadísticas.
 
 58. ¿Cuáles fueron los criterios para recortar alcance?
 Respuesta hablada: No agregar nada que no pida la consigna. Por eso no hay módulo de stock aparte, no hay usuario custom, no hay imágenes, no hay JWT, no hay más de 10 modelos ni más de 10 endpoints.
@@ -388,6 +390,10 @@ T10. ¿El filtro por precio es seguro?
 Respuesta hablada: Sí, porque se filtra en el servidor con DjangoFilterBackend y no se ejecuta SQL a mano. El usuario solo envía el valor y el ORM lo compara como número.
 Detalle técnico: CervezaViewSet usa django-filter con el campo precio. No hay interpolación de strings en consultas, así que no hay inyección SQL.
 
+T11. Si ya hay token, ¿para qué quieren sesión? ¿No es redundante?
+Respuesta hablada: No es redundante porque cada autenticación la usa un cliente distinto: la sesión la usa el panel admin y la API navegable (con su botón de login/logout en /api-auth/), y el token lo usa el frontend SPA, que no puede usar cookies sin tropezar con CSRF y con el hecho de que localhost:3000 y localhost:8000 comparten cookies. La consigna pide ambas y cada una cumple su función.
+Detalle técnico: settings.py: DEFAULT_AUTHENTICATION_CLASSES = [TokenAuthentication, SessionAuthentication]; rest_framework.urls montado en /api-auth/ para el login de la Browsable API. El test test_sesion_ya_autenticado_devuelve_200 verifica que un GET con sesión activa devuelve 200 mientras el mismo GET sin autenticar devuelve 401.
+
 ## 6. Guion de apertura (2 minutos)
 
 Texto para ensayar de corrido, suena natural, no leído.
@@ -400,7 +406,7 @@ La solución es una API REST con Django 5.2 LTS y Django REST Framework. Diez mo
 
 Algunas decisiones que tomamos a propósito: usamos exactamente diez modelos y diez endpoints porque la consigna lo pide y no queremos agregar código de más. El stock es un campo numérico en la cerveza y en la materia prima, sin una entidad aparte. Usamos el usuario de Django sin customizar, no usamos imágenes, y el token es el nativo de DRF porque la consigna pide sesión y tokens y eso se configura en una línea.
 
-El proyecto está dockerizado con PostgreSQL 17, usa uv para manejar dependencias, gunicorn para servir y whitenoise para estáticos. Trabajamos con ramas feature, commits en español y fusiones a main sin fast-forward.
+El proyecto está dockerizado con PostgreSQL 17, usa uv para manejar dependencias, gunicorn para servir y whitenoise para estáticos. Trabajamos con ramas feature, commits en español, fusiones a main sin fast-forward y un pull request por rama publicado en GitHub.
 
 El backend está listo para defender. Gracias, quedo a disposición de sus preguntas.
 
@@ -419,7 +425,7 @@ Qué hacer si no sabés algo: no inventes. Decí algo como: eso no lo implement�
 Domingo 1 de noviembre (entrega):
 - Leer la ficha de 60 segundos y memorizarla.
 - Leer el guion de apertura y ensayarlo dos veces en voz alta.
-- Revisar las 17 consignas y cómo se demuestra cada una (sección 3).
+- Revisar las consignas de la sección 3 y la matriz R1–R21 de `docs/08-trazabilidad-requisitos.md`.
 - Levantar el proyecto localmente y probar: uv run python manage.py migrate, uv run python manage.py runserver, /api/, /api/schema/swagger-ui/, /admin/.
 
 Lunes 2 de noviembre (día previo a la defensa):

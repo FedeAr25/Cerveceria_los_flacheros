@@ -29,6 +29,7 @@ Un detalle práctico: los errores también son material de estudio. Cuando algo 
 | [`05-stack-y-entorno.md`](05-stack-y-entorno.md) | `uv`, Docker, PostgreSQL, `gunicorn`, `pytest` y `ruff` | Fases 0, 6 y 7 | Escrita |
 | [`06-cuaderno-de-defensa.md`](06-cuaderno-de-defensa.md) | Cuaderno de defensa oral | Fase 8 | Escrita |
 | [`07-plan-de-aprendizaje.md`](07-plan-de-aprendizaje.md) | Plan de aprendizaje de 15 días para entender el backend y defenderlo | Para ordenar las semanas; consultar siempre | Escrita |
+| [`08-trazabilidad-requisitos.md`](08-trazabilidad-requisitos.md) | Matriz R1–R21: cada requisito del docente cruzado con su evidencia y estado | Fase 8 (checklist de entrega) y antes de la defensa | Escrita |
 
 ## Cómo están armadas las guías (4 capas)
 
@@ -101,6 +102,6 @@ La plantilla vive en [`docs/tareas/_plantilla.md`](tareas/_plantilla.md). Se usa
 | ¿Qué le respondo si me pregunta X? / Ensayo de defensa | `06-cuaderno-de-defensa.md` |
 | El diagrama ER y el modelo de datos completo | `tasks/plan.md` §7 |
 | El contrato con el frontend de Ema | `tasks/api-contract.md` |
-| ¿Cumplen los 17 requisitos? | `tasks/todo.md` (checklist final) + `README.md` de la raíz |
+| ¿Cumplen los 21 requisitos (R1–R21)? | `docs/08-trazabilidad-requisitos.md` (matriz) + `tasks/todo.md` (checklist final) + `README.md` de la raíz |
 | ¿Cómo organizo los días y por dónde sigo? | `07-plan-de-aprendizaje.md` |
 | Proceso Git: ramas, commits, merges | `tasks/plan.md` §11 + `git log --oneline` |

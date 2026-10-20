@@ -33,6 +33,14 @@ Todas las peticiones a `/api/...` deben llevar el header:
 Authorization: Token <token>
 ```
 
+El token sirve **tanto para GET como para POST/PUT/PATCH/DELETE**: no hay lectura anónima. **GET sin token (o con token inválido) devuelve `401` en TODOS los endpoints**, sin excepción. Regla de permisos de un vistazo:
+
+- **Leer** (`GET`): cualquier usuario autenticado.
+- **Escribir** (`POST`/`PUT`/`PATCH`/`DELETE`): solo usuarios staff, **excepto** `/api/pedidos/` y `/api/lineas/`, donde cualquier usuario autenticado crea y edita (es el mostrador).
+- `GET /api/pedidos/estadisticas/` y `POST /api/lotes/{id}/avanzar/`: solo staff.
+
+La API navegable (la misma API vista en el navegador) tiene además login por sesión en `/api-auth/` (panel admin y Browsable API de DRF); eso no cambia nada para vos: desde el frontend se usa solo token.
+
 ### Por qué NO usar cookies de sesión
 
 - Las cookies **ignoran el puerto**: `localhost:3000` (tu frontend) y `localhost:8000` (el backend) comparten cookies porque están en el mismo host.
@@ -69,21 +77,21 @@ Todos los recursos son `ModelViewSet`: cada URL de colección tiene además su d
 |---|---|---|---|---|
 | POST | `/api/auth-token/` | No | — | `{token}` |
 | GET, POST | `/api/estilos/` | Token (lectura; admin para escribir) | page, page_size, search, ordering | paginado |
-| GET, POST | `/api/cervezas/` | Token | page, page_size, filtros, search, ordering | paginado |
+| GET, POST | `/api/cervezas/` | Token (lectura; admin para escribir) | page, page_size, filtros, search, ordering | paginado |
 | GET | `/api/cervezas/en_grifo/` | Token | — | cervezas en grifo con stock |
-| GET, POST | `/api/lotes/` | Token | page, page_size, search, ordering | paginado **con `etapas`** |
+| GET, POST | `/api/lotes/` | Token (lectura; admin para escribir) | page, page_size, search, ordering | paginado **con `etapas`** |
 | GET | `/api/lotes/{id}/` | Token | — | lote plano (sin `etapas`) |
-| GET, POST | `/api/etapas/` | Token | page, page_size, filtros, ordering | paginado |
+| GET, POST | `/api/etapas/` | Token (lectura; admin para escribir) | page, page_size, filtros, ordering | paginado |
 | GET, POST | `/api/proveedores/` | Token (lectura; admin para escribir) | page, page_size, search, ordering | paginado |
-| GET, POST | `/api/materias-primas/` | Token | page, page_size, filtros, search, ordering | paginado |
-| GET, POST | `/api/clientes/` | Token | page, page_size, search, ordering | paginado |
-| GET, POST | `/api/pedidos/` | Token | page, page_size, filtros, search, ordering | paginado **con `lineas`** |
+| GET, POST | `/api/materias-primas/` | Token (lectura; admin para escribir) | page, page_size, filtros, search, ordering | paginado |
+| GET, POST | `/api/clientes/` | Token (lectura; admin para escribir) | page, page_size, search, ordering | paginado |
+| GET, POST | `/api/pedidos/` | Token (lectura y escritura: es el mostrador) | page, page_size, filtros, search, ordering | paginado **con `lineas`** |
 | GET | `/api/pedidos/{id}/` | Token | — | pedido plano (sin `lineas`) |
 | GET | `/api/pedidos/estadisticas/` | Token **admin** | — | métricas de pedidos |
-| GET, POST | `/api/lineas/` | Token | page, page_size, ordering | paginado |
-| GET, POST | `/api/opiniones/` | Token | page, page_size, ordering | paginado |
+| GET, POST | `/api/lineas/` | Token (lectura y escritura: es el mostrador) | page, page_size, ordering | paginado |
+| GET, POST | `/api/opiniones/` | Token (lectura; admin para escribir) | page, page_size, ordering | paginado |
 
-Códigos: `200` OK · `201` creado · `204` borrado · `400` validación · `401` sin token o inválido · `403` sin permiso · `404` no existe.
+Códigos: `200` OK · `201` creado · `204` borrado · `400` validación · `401` sin token o inválido · `403` sin permiso · `404` no existe. **GET sin token = `401` en todos los endpoints (no hay lectura anónima).**
 
 ## Filtros, búsqueda y orden por endpoint
 
@@ -236,8 +244,9 @@ Solo `list` trae los hijos anidadas. `retrieve` (`{id}/`) y todas las escrituras
 |---|---|---|---|
 | GET | `/api/cervezas/en_grifo/` | Token | Cervezas con `tipo='GRIFO'`, activas y con `stock > 0`. Misma forma que cualquier listado de cervezas (paginado, `CervezaSerializer`). |
 | GET | `/api/pedidos/estadisticas/` | Token **admin** | `{ "total_pedidos": 25, "monto_total": 350000.00, "pedidos_por_estado": { "PENDIENTE": 4, "CONFIRMADO": 10, ... }, "promedio_ticket": 14000.00 }` |
+| POST | `/api/lotes/{id}/avanzar/` | Token **admin** | Avanza el lote al siguiente estado de la máquina (`PLANIFICADO → EN_PRODUCCION → FERMENTACION → MADURACION → LISTO`, con `CANCELADO` permitido desde cualquier estado activo). Un salto inválido responde `400`. **La consume el frontend** (pantalla de producción) para mover lotes sin editar el estado a mano. |
 
-(Posible tercer action, **opcional y aún no comprometido**: `POST /api/lotes/{id}/avanzar/`. Si se implementa, se agrega a este contrato antes de usarlo.)
+Con `avanzar` el backend queda con **tres** `@action`: `en_grifo`, `estadisticas` y `avanzar`. Nota: `monto_total` y `promedio_ticket` pueden venir `null` si todavía no hay pedidos cargados — manejá `null` en el front.
 
 ## Ejemplo de cliente en JavaScript puro
 
@@ -298,4 +307,4 @@ async function listarEnGrifo() {
 3. **No mandes cookies de sesión:** no uses `credentials: "include"` ni cookies de autenticación; todo el login es por header (evitamos el problema de CSRF con cookies compartidas entre puertos).
 4. **Paginación:** respetá `count/next/previous`; el default son 10 items por página (tope 50 con `?page_size=`).
 5. **Nesting:** los hijos (`lineas`, `etapas`) solo vienen en `list`; si implementás una vista de detalle y necesitás los hijos, usá el listado o avisame.
-6. **Credenciales de prueba:** usuario demo con permisos de lectura/escritura normal; para `GET /api/pedidos/estadisticas/` necesitás un usuario staff (las credenciales exactas quedan en el `README.md` final).
+6. **Credenciales de prueba:** usuario demo (no staff): puede **leer** todo y **crear/editar** solo `/api/pedidos/` y `/api/lineas/` (es el mostrador). Para escribir el resto de los recursos, y para `GET /api/pedidos/estadisticas/` y `POST /api/lotes/{id}/avanzar/`, necesitás un usuario staff (las credenciales exactas quedan en el `README.md` final).

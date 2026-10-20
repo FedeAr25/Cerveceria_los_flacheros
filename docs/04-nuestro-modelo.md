@@ -422,7 +422,7 @@ stateDiagram-v2
 
 Y `EtapaFermentacion` tiene una máquina corta: `PENDIENTE` → `ACTIVA` → `COMPLETADA`.
 
-Esto se implementa en la vista con una `@action`: en nuestro caso, `POST /api/lotes/{id}/avanzar/` pasa el lote al siguiente estado y rechaza con `400` los saltos inválidos. No guardamos la máquina en la base de datos: la máquina vive en el código, y la base guarda solo el estado actual.
+Esto se implementa en la vista con una `@action` (Fase 4, Task 18): en nuestro caso, `POST /api/lotes/{id}/avanzar/` pasa el lote al siguiente estado y rechaza con `400` los saltos inválidos. No guardamos la máquina en la base de datos: la máquina vive en el código, y la base guarda solo el estado actual.
 
 > **Para la defensa:** "Los estados son listas cerradas con `choices`, lo que da validación y documentación gratis. `Lote` avanza de PLANIFICADO a LISTO pasando por la producción, y `Pedido` avanza de PENDIENTE a ENTREGADO; ambos admiten CANCELADO desde cualquier estado activo. El avance se hace con la acción `avanzar`, que valida el salto permitido."
 
@@ -451,7 +451,7 @@ Detalle del anidado, que es lo que más preguntan:
 - `GET /api/pedidos/` → cada pedido trae **además** su lista `lineas`.
 - `GET /api/lotes/1/` (detalle) → trae el lote **sin** anidar etapas. Es a propósito: el detalle se sirve con el serializer simple para no duplicar trabajo.
 
-> **Para la defensa:** "Cada modelo tiene su ViewSet y su endpoint con `DefaultRouter` en `/api/`. Dos recursos son más ricos: `lotes` anida sus etapas y `pedidos` anida sus líneas, pero solo en la lista. Y hay dos acciones propias: `cervezas/en_grifo/` y `pedidos/estadisticas/`."
+> **Para la defensa:** "Cada modelo tiene su ViewSet y su endpoint con `DefaultRouter` en `/api/`. Dos recursos son más ricos: `lotes` anida sus etapas y `pedidos` anida sus líneas, pero solo en la lista. Y hay tres acciones propias: `cervezas/en_grifo/`, `pedidos/estadisticas/` y `lotes/{id}/avanzar/`."
 
 ---
 
