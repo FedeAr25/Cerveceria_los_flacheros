@@ -149,7 +149,7 @@ Tres reglas de sintaxis que caen mal al principio:
 
 ### Ejemplo real: respuesta de `GET /api/cervezas/?search=ipa`
 
-Con `PAGE_SIZE = 10`, toda respuesta de listado tiene esta forma. Fijate los cuatro campos fijos:
+Con la paginación global de 10 por página (clase `DefaultPagination`), toda respuesta de listado tiene esta forma. Fijate los cuatro campos fijos:
 
 ```json
 {
@@ -182,7 +182,7 @@ Claves del ejemplo:
 - **`precio` y `alcohol_pct` llegan como texto** (`"12500.00"`): los `DecimalField` de Django se serializan como string para no perder precisión. Un error clásico del frontend es sumarlos sin convertir.
 - **`estilo` es un número**: por defecto DRF manda el `id` del FK. Si el serializer lo declara anidado, en cambio verías el objeto completo.
 
-> **Para la defensa:** "JSON es texto con 6 tipos de valor: número, string, booleano, nulo, lista y objeto. Nuestras respuestas de listado siempre traen `count`, `next`, `previous` y `results` porque usamos paginación con `PAGE_SIZE=10`; así el frontend pagina sin reimplementar la lógica."
+> **Para la defensa:** "JSON es texto con 6 tipos de valor: número, string, booleano, nulo, lista y objeto. Nuestras respuestas de listado siempre traen `count`, `next`, `previous` y `results` porque usamos una clase de paginación propia con `page_size = 10`; así el frontend pagina sin reimplementar la lógica."
 
 ---
 
@@ -444,7 +444,7 @@ El frontend de Ema hace `POST /api/pedidos/` con `Content-Type: application/json
 4. El middleware de CORS deja pasar la request.
 5. `config/urls.py` la deriva a `/api/pedidos/` → `PedidoViewSet.create`.
 6. `TokenAuthentication` lee el header, busca el token y resuelve el usuario; si no existe, corta con 401.
-7. El permiso (`IsAuthenticated` o `IsAdminOrReadOnly`) dice si puede escribir; si no, 403.
+7. El permiso decide si puede escribir: `IsAdminUser` exige staff, salvo en el mostrador (`Pedido` y `LineaPedido`), donde basta estar identificado; si no, 403.
 8. El `PedidoSerializer` valida el JSON: si hay un campo mal, corta con 400 antes de tocar la base.
 9. La vista crea el `Pedido` (y sus `LineaPedido`) en la base de datos.
 10. El serializer convierte la instancia a dict, DRF renderiza a JSON y responde `201 Created`.

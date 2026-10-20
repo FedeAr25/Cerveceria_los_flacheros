@@ -801,7 +801,7 @@ Dos modos principales:
 | URL que genera | `/api/cervezas/en_grifo/` | `/api/lotes/1/avanzar/` |
 | ¿Pide id en la URL? | No | Sí, va después del prefijo y antes de la acción |
 | Para qué sirve | Consulta sobre la colección | Operación sobre un objeto concreto |
-| Ejemplos nuestros | `en_grifo`, `estadisticas` | `avanzar` (opcional) |
+| Ejemplos nuestros | `en_grifo`, `estadisticas` | `avanzar` (comprometida, Fase 4 / Task 18) |
 
 Dos atributos que conviene distinguir:
 
@@ -944,7 +944,7 @@ Respuesta JSON:
 
 Si un usuario normal (no staff) pide esa URL, la respuesta es **403**, porque `IsAdminUser` se aplica solo a esa acción.
 
-**3. La opcional, `POST /api/lotes/{id}/avanzar/`** (`detail=True`):
+**3. La tercera, `POST /api/lotes/{id}/avanzar/`** (`detail=True`, comprometida en el plan para la Fase 4):
 
 ```python
 class LoteViewSet(viewsets.ModelViewSet):
@@ -1143,7 +1143,7 @@ Tres configuraciones que conviene poder explicar:
 
 | Config | Valor nuestro | Qué hace |
 |---|---|---|
-| `PAGE_SIZE` | 10 | Cuántos elementos por página, por defecto |
+| `page_size` | 10 | Cuántos elementos por página, por defecto |
 | `page_size_query_param` | `"page_size"` | Nombre del query param con el que el cliente puede pedir otro tamaño |
 | `max_page_size` | 50 | Tope: si alguien pide `?page_size=1000`, se trunca a 50 |
 
@@ -1168,11 +1168,10 @@ class DefaultPagination(PageNumberPagination):
 REST_FRAMEWORK = {
     # ... el resto de la config ...
     "DEFAULT_PAGINATION_CLASS": "config.settings.DefaultPagination",
-    "PAGE_SIZE": 10,
 }
 ```
 
-(`DEFAULT_PAGINATION_CLASS` le dice a DRF qué clase usar en todos los ViewSets. `PAGE_SIZE` es el tamaño por defecto. Con la clase propia ganamos además `page_size` y `max_page_size`.)
+(`DEFAULT_PAGINATION_CLASS` le dice a DRF qué clase usar en todos los ViewSets. El tamaño no se configura con la clave `"PAGE_SIZE"` del dict: vive únicamente en la clase, `page_size = 10`, junto a `page_size_query_param` y `max_page_size`.)
 
 Ejemplo real: `GET /api/pedidos/?page=2&page_size=5`.
 
@@ -1190,7 +1189,7 @@ Traducción: "hay 137 pedidos en total; con 5 por página serían 28 páginas; e
 Un caso que conviene conocer: `GET /api/pedidos/?page=999` responde **404** con `{"detail": "Invalid page."}`, porque esa página no existe. No es un error del frontend de "no encontró el endpoint": es "esa página no tiene elementos".
 
 > **Para la defensa:**
-> "Usamos `PageNumberPagination` con `PAGE_SIZE = 10`. La respuesta no es un array sino un objeto con `count`, `next`, `previous` y `results`. Declaramos una clase propia, `DefaultPagination`, para que el cliente pueda pedir otro tamaño con `?page_size=` pero con un tope de `max_page_size = 50`, así nadie nos pide la tabla entera. Es lo que hace cualquier API de producción: sin paginación, una tabla grande devolvería una respuesta enorme y lenta."
+> "Usamos una clase propia de paginación, `DefaultPagination` (en `config/settings.py`), con `page_size = 10`, `page_size_query_param = "page_size"` y `max_page_size = 50`. La respuesta no es un array sino un objeto con `count`, `next`, `previous` y `results`. La clase propia le permite al cliente pedir otro tamaño con `?page_size=` pero con tope de 50, así nadie nos pide la tabla entera. Es lo que hace cualquier API de producción: sin paginación, una tabla grande devolvería una respuesta enorme y lenta."
 
 ### Ejercicio para comprobar que lo entendiste
 
@@ -1248,13 +1247,14 @@ REST_FRAMEWORK = {
 
 **¿Qué hace el servidor en cada caso?** Con sesión, DRF lee la cookie `sessionid`, la busca en la base y con eso identifica al usuario. Con token, lee el header `Authorization`, verifica que empiece con `Token `, busca esa clave en la tabla `authtoken_token` y con eso identifica al usuario.
 
-**Los tres permisos que usamos:**
+**Los dos permisos que usamos:**
 
 | Permiso | Qué permite | Dónde lo usamos |
 |---|---|---|
-| `IsAuthenticated` | Cualquier usuario identificado | Global, en todos los ViewSets |
-| `IsAdminOrReadOnly` | Cualquiera lee; solo el staff escribe | `EstiloViewSet` y `ProveedorViewSet` (catálogos) |
-| `IsAdminUser` | Solo el staff | La acción `estadisticas` |
+| `IsAuthenticated` | Cualquier usuario identificado | Lectura: es el permiso global y aplica a todos los endpoints (sin token, ninguno responde) |
+| `IsAdminUser` | Solo el staff | Escritura (crear, editar, borrar) en los catálogos, y la acción `estadisticas` |
+
+La única excepción de la escritura es el mostrador: en `PedidoViewSet` y `LineaPedidoViewSet` no reemplazamos el permiso global, así que cualquier usuario autenticado puede escribir (el bar toma pedidos); en el resto de los catálogos, escribir es cosa del staff.
 
 **Por qué `SessionAuthentication` devuelve 403 y no 401 (la pregunta clásica).** DRF devuelve 401 solo si puede decirle al cliente **cómo autenticarse**, mandando un header `WWW-Authenticate`. Ese header lo aporta la clase de autenticación: `TokenAuthentication` aporta `"Token"`, pero `SessionAuthentication` no aporta nada, porque las cookies no se piden con ese mecanismo. Si DRF no tiene con qué desafiar, baja el código de 401 a 403 para no mentirle al cliente.
 
@@ -1436,7 +1436,7 @@ uv run python manage.py spectacular --file schema.yml --validate
 - **Responses**: los códigos posibles (`200`, `201`, `400`, `401`, `403`) y el shape de cada uno, incluida la paginación con `count`, `next`, `previous` y `results`.
 - **Authorize**: el candadito de arriba a la derecha para cargar el header `Authorization: Token <key>` y probar los endpoints protegidos directamente desde ahí.
 
-**¿Por qué el docente lo pide?** Porque la documentación automática es un requisito de la EFI, y porque demuestra la API completa sin tener que leer el código: con Swagger se ve que existen los 10 endpoints, las 2 acciones, los filtros y los permisos. Es la mejor evidencia para una defensa oral.
+**¿Por qué el docente lo pide?** Porque la documentación automática es un requisito de la EFI, y porque demuestra la API completa sin tener que leer el código: con Swagger se ve que existen los 10 endpoints, las 3 acciones, los filtros y los permisos. Es la mejor evidencia para una defensa oral.
 
 ### Ejemplo con nuestro proyecto
 
@@ -1470,7 +1470,7 @@ En Swagger, al abrir `GET /api/pedidos/estadisticas/`, vas a ver algo así:
 | Candadito "Authorize" | Ahí cargás `Token <tu-key>` y lo probás |
 
 > **Para la defensa:**
-> "OpenAPI es la descripción automática de la API en un archivo generado desde el código; Swagger UI y ReDoc son dos formas de leerla. Con drf-spectacular generamos `/api/schema/`, la Swagger UI en `/api/schema/swagger-ui/` y ReDoc en `/api/schema/redoc/`. Validamos el esquema con `manage.py spectacular --file schema.yml --validate`. Es un requisito porque deja ver la API completa sin leer el código: los 10 endpoints, las 2 acciones, los parámetros de filtrado, los códigos de respuesta y la autenticación."
+> "OpenAPI es la descripción automática de la API en un archivo generado desde el código; Swagger UI y ReDoc son dos formas de leerla. Con drf-spectacular generamos `/api/schema/`, la Swagger UI en `/api/schema/swagger-ui/` y ReDoc en `/api/schema/redoc/`. Validamos el esquema con `manage.py spectacular --file schema.yml --validate`. Es un requisito porque deja ver la API completa sin leer el código: los 10 endpoints, las 3 acciones, los parámetros de filtrado, los códigos de respuesta y la autenticación."
 
 ### Ejercicio para comprobar que lo entendiste
 
@@ -1597,7 +1597,7 @@ Tabla de los errores que vamos a tener, con causa, detección y arreglo:
 | Error | Causa típica | Cómo lo detectás | Cómo lo arreglás |
 |---|---|---|---|
 | **401** | Falta el header o el token es inválido o mal escrito (`Token` con mayúscula y espacio) | `{"detail": "Authentication credentials were not provided."}` con header `WWW-Authenticate: Token` | Pedir token en `POST /api/auth-token/` y mandar `Authorization: Token <key>` en cada request |
-| **403** | Autenticado pero sin permiso (`IsAdminUser` sin staff, `IsAdminOrReadOnly` escribiendo), o CSRF con sesión | `{"detail": "You do not have permission to perform this action."}` | Usar un usuario staff, o un método de lectura, o token en lugar de sesión |
+| **403** | Autenticado pero sin permiso (`IsAdminUser` sin staff), o CSRF con sesión | `{"detail": "You do not have permission to perform this action."}` | Usar un usuario staff, o token en lugar de sesión |
 | **404** | URL mal escrita: falta la barra final, mal prefijo, id inexistente, o `?page=999` | `{"detail": "Not found."}` o `{"detail": "Invalid page."}` | Copiar la URL de Swagger exacta, con la barra final y con un id que exista |
 | **405** | Método que esa URL no soporta: `DELETE /api/pedidos/`, `POST /api/pedidos/1/`, `GET /api/lotes/1/avanzar/` | `{"detail": "Method \"DELETE\" not allowed."}` | Mirar en Swagger qué métodos acepta esa URL y usar uno correcto |
 | **400** | El serializer rechazó el body: campo obligatorio faltante, tipo mal, `choices` inválido, número negativo | `{"precio": ["Ensure this value is greater than or equal to 0."]}` | Leer el error campo por campo y corregir el JSON |
@@ -1683,9 +1683,9 @@ No hace falta memorizar el código. Hace falta poder decir estas quince frases c
 6. **ViewSets.** `ModelViewSet` da el CRUD completo con 6 acciones armadas; con `queryset` y `serializer_class` declaro qué maneja y cómo traduce, y con `get_queryset()` y `get_serializer_class()` lo varío por request.
 7. **Router.** `DefaultRouter` genera las URLs por convención: `/api/prefijo/` y `/api/prefijo/{id}/`, siempre con barra final, y registra todo en el índice y en Swagger.
 8. **Anidado SOLO en `list`.** `get_serializer_class()` devuelve `PedidoNestedSerializer` o `LoteNestedSerializer` cuando `self.action == "list"`, y el serializer plano para el resto. Motivos: recursión entre modelos referenciados, payload gigante y escrituras anidadas no deseadas.
-9. **`@action`.** Agrega endpoints de negocio: `GET /api/cervezas/en_grifo/` (filtra `tipo='GRIFO'`, `activo=True`, `stock > 0`) y `GET /api/pedidos/estadisticas/` (`IsAdminUser`, con `Count`, `Sum` y `Avg`). No hace falta un modelo nuevo porque son cálculos, no datos guardados.
+9. **`@action`.** Agrega endpoints de negocio: `GET /api/cervezas/en_grifo/` (filtra `tipo='GRIFO'`, `activo=True`, `stock > 0`), `GET /api/pedidos/estadisticas/` (`IsAdminUser`, con `Count`, `Sum` y `Avg`) y `POST /api/lotes/{id}/avanzar/`. No hace falta un modelo nuevo porque son cálculos, no datos guardados.
 10. **Filtros, búsqueda y orden.** `filterset_fields`, `search_fields` y `ordering_fields` se aplican al `queryset` antes de paginar, y se pueden combinar en un mismo query string.
-11. **Paginación.** `PAGE_SIZE = 10`, con `?page_size=` y tope de 50; respuesta con `count`, `next`, `previous` y `results`.
+11. **Paginación.** Clase propia `DefaultPagination` con `page_size = 10`, `?page_size=` y tope de 50; respuesta con `count`, `next`, `previous` y `results`.
 12. **Token y códigos.** `POST /api/auth-token/` devuelve el token; después viaja en `Authorization: Token <key>`. 401 = sin credenciales, 403 = sin permiso.
 13. **Sesión, CSRF y la trampa de las cookies.** La sesión pide CSRF; las cookies ignoran el puerto, así que `localhost:3000` y `localhost:8000` comparten cookies; por eso el frontend usa solo token.
 14. **CORS.** `CorsMiddleware` primero en `MIDDLEWARE`, `CORS_ALLOWED_ORIGINS` con el origen exacto, preflight `OPTIONS` porque mandamos `Authorization`, y CORS no es CSRF.
@@ -1702,7 +1702,7 @@ No hace falta memorizar el código. Hace falta poder decir estas quince frases c
 | ¿Por qué un `@action` y no un modelo nuevo? | Porque las estadísticas y el grifo son consultas y cálculos sobre datos que ya existen. |
 
 > **Para la defensa:**
-> "Si tengo que resumir el backend en un minuto: 10 modelos en una sola app `core`, 10 ViewSets registrados en un `DefaultRouter` bajo `/api/`, paginación de 10 con tope 50, filtros y búsquedas en los endpoints, autenticación por token con `IsAuthenticated` global, dos catálogos con `IsAdminOrReadOnly`, datos anidados solo en el listado con `get_serializer_class()`, dos acciones propias (`en_grifo` y `estadisticas` con `IsAdminUser`), documentación OpenAPI con drf-spectacular y CORS restrictivo para el frontend de Next.js."
+> "Si tengo que resumir el backend en un minuto: 10 modelos en una sola app `core`, 10 ViewSets registrados en un `DefaultRouter` bajo `/api/`, paginación de 10 con tope 50, filtros y búsquedas en los endpoints, autenticación por token con `IsAuthenticated` global (sin token no se lee nada), escritura con `IsAdminUser` salvo en el mostrador (`Pedido` y `LineaPedido`, donde cualquier autenticado escribe), datos anidados solo en el listado con `get_serializer_class()`, tres acciones propias (`en_grifo`, `estadisticas` con `IsAdminUser` y `avanzar`), documentación OpenAPI con drf-spectacular y CORS restrictivo para el frontend de Next.js."
 
 ### Ejercicio final para comprobar que lo entendiste
 
