@@ -1,0 +1,56 @@
+# backend/compose.yaml — Compose v2 (se usa `docker compose`, sin guion).
+# El `version:` top-level está obsoleto y se OMITE.
+#
+# ANTES DEL PRIMER `docker compose up` hay que copiar .env.example a .env:
+#     Copy-Item .env.example .env
+# El compose usa `env_file: .env`; si el archivo no existe, compose falla.
+# El .env NO se commitea (está en .gitignore).
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flacheros}
+      POSTGRES_USER: ${POSTGRES_USER:-flacheros}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flacheros}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready responde OK cuando Postgres acepta conexiones: es el semáforo
+      # que usa depends_on.condition: service_healthy de servicio `web`.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flacheros} -d ${POSTGRES_DB:-flacheros}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    # Requiere backend/.env (copiar de .env.example): ahí viven DJANGO_SECRET_KEY,
+    # DEBUG, ALLOWED_HOSTS, POSTGRES_* y CORS_ALLOWED_ORIGINS.
+    env_file: .env
+    environment:
+      # OJO: SIN espacios en la URL; un espacio después de `postgres://` rompe el
+      # parseo y Django no conecta. El hostname es `db` (el nombre del servicio
+      # dentro de la red de compose), no localhost. Este bloque tiene prioridad
+      # sobre env_file, así pisa el DATABASE_URL=sqlite del .env local.
+      DATABASE_URL: postgres://${POSTGRES_USER:-flacheros}:${POSTGRES_PASSWORD:-flacheros}@db:5432/${POSTGRES_DB:-flacheros}
+      # Dentro del contenedor se accede por el puerto publicado, así que el host
+      # de la request es `localhost` (y 127.0.0.1 por si se prueba adentro).
+      ALLOWED_HOSTS: localhost,127.0.0.1
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        # No arrancar hasta que el healthcheck de db dé OK; si no, el primer
+        # `migrate` falla porque Postgres todavía no está listo (el error clásico
+        # del "first run").
+        condition: service_healthy
+    # Orden real de despliegue de un Django: migrar, juntar estáticos y recién
+    # ahí arrancar gunicorn. collectstatic ANTES que gunicorn: whitenoise sirve
+    # staticfiles/, y sin ese paso el admin se ve sin estilos.
+    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+
+# Los datos de Postgres viven fuera del ciclo de vida del contenedor:
+# `docker compose down` los conserva; `down -v` los borra.
+volumes:
+  postgres_data:
