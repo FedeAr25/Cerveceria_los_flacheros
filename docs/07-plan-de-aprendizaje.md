@@ -39,10 +39,10 @@ Las "guías" son los documentos de `docs/`. Las "tareas" son las de `tasks/todo.
 | **sáb 24/10** | Fase 3 → 4 | `docs/04-nuestro-modelo.md`: "Estados como máquinas simples". `docs/03-http-json-cors.md`: "JSON". Tareas 11 y 12 | `@property nombre_completo` y `subtotal`; registrar los 10 modelos en `admin.py` | Creás una cerveza desde el admin y `nombre_completo` aparece en la lista |
 | **dom 25/10** | Fase 4 — API | `docs/03-http-json-cors.md`: "Headers" y "El viaje completo de una request autenticada". Tarea 14 | Escribí los 10 serializers simples y probá `GET /api/cervezas/` en el navegador | Ves un JSON con `count`, `next`, `previous` y `results` |
 | **lun 26/10** | Fase 4 — API | Repasá "El viaje completo" entero (el diagrama ASCII). Tarea 15 | ViewSets + `DefaultRouter` + permisos globales; probá `POST /api/auth-token/` | Tenés un token y con `Authorization: Token ...` el `POST` deja de dar 401 |
-| **mar 27/10** | Fase 4 → 5 | `docs/04-nuestro-modelo.md`: "De modelo a endpoint". Tareas 16, 17, 18 | Anidado solo en `list` con `get_serializer_class()`, `@action en_grifo` y `estadisticas`, filtros | `GET /api/lotes/` trae `etapas` adentro y `GET /api/lotes/1/` no |
+| **mar 27/10** | Fase 4 → 5 | `docs/04-nuestro-modelo.md`: "De modelo a endpoint". Tareas 16, 17, 18 | Anidado solo en `list` con `get_serializer_class()`, `@action en_grifo`, `estadisticas` y `avanzar`, filtros | `GET /api/lotes/` trae `etapas` adentro y `GET /api/lotes/1/` no |
 | **mié 28/10** | Fase 5 → 6 | `docs/03-http-json-cors.md`: "CORS a fondo", "Cookies", "HTTPS en producción". Tarea 19 | `CORS_ALLOWED_ORIGINS`, probá una llamada con `fetch` desde un HTML en :3000 | Sin CORS el fetch falla; con CORS devuelve JSON. Podés explicar 401 vs 403 |
 | **jue 29/10** | Fase 6 → 7 | `docs/05-stack-y-entorno.md`: "Docker", "Dockerfile", "Docker Compose", "PostgreSQL". Tareas 21 y 22 | `docker compose up --build`, mirá el healthcheck, entrá con `psql` | `docker compose ps` muestra `db` (healthy) y `web` (running); `GET /api/cervezas/` responde desde :8000 contenedorizado |
-| **vie 30/10** | Fase 7 → 8 | `docs/05-stack-y-entorno.md`: "gunicorn vs runserver", "whitenoise y collectstatic", "pytest y pytest-django", "ruff". Tareas 23 y 24 | Escribí los ~12 tests, corré `pytest`, `ruff check .` y `ruff format .` | La triada en verde: `uv run pytest`, `uv run ruff check .` y `uv run ruff format --check .` sin errores |
+| **vie 30/10** | Fase 7 → 8 | `docs/05-stack-y-entorno.md`: "gunicorn vs runserver", "whitenoise y collectstatic", "pytest y pytest-django", "ruff". Tareas 23 y 24 | Escribí los 13 tests (incluido el de sesión ya autenticada), corré `pytest`, `ruff check .` y `ruff format .` | La triada en verde: `uv run pytest`, `uv run ruff check .` y `uv run ruff format --check .` sin errores |
 | **sáb 31/10** | Fase 8 — Cierre | Plan de repaso final (más abajo). Tarea 25 | Seed de datos y credenciales demo; probá el flujo completo de un pedido end-to-end | Con el seed cargado, el front de Ema puede crear un pedido de punta a punta |
 | **dom 1/11** | Fase 8 — Cierre | Releé tus notas de `docs/tareas/`. Tareas 26 y 27 | Capturas para el README y el `README.md` final | El README se lee solo: stack, ER, endpoints, instalación y capturas |
 | **lun 2/11** | Fase 8 — Entrega | Ensayo completo (abajo). Tarea 28 y 29 | Ensayá la defensa en voz alta con las preguntas de "Para la defensa" de cada guía | Podés explicar los 10 modelos, el viaje de una request y por qué Docker sin mirar notas |
@@ -163,14 +163,14 @@ Para practicar por tu cuenta, en tres niveles de dificultad.
 
 a) Abrí `backend/config/settings.py` y listá tres paquetes de terceros que aparezcan en `INSTALLED_APPS` o `MIDDLEWARE`.
 b) En `core/models.py`, contá cuántos campos tiene `Pedido` **sin contar** el `id` ni la FK `cliente`.
-c) Buscá en el proyecto dónde se define `PAGE_SIZE` y explicá qué cambia si lo pasás a 5.
+c) Buscá en el proyecto dónde se define el tamaño de página y explicá qué cambia si lo pasás a 5.
 
 <details>
 <summary>Respuestas</summary>
 
 a) `corsheaders` (en `INSTALLED_APPS` y `MIDDLEWARE`), `rest_framework` y `drf_spectacular` (en `INSTALLED_APPS`), `whitenoise` (en `MIDDLEWARE`) o `django_filters`. Cualquiera de estas sirve.
 b) Seis: `fecha`, `estado`, `forma_pago`, `total`, `direccion_entrega` y `observaciones`.
-c) En `config/settings.py`, en el bloque `REST_FRAMEWORK`. Si lo pasás a 5, cada página del listado trae 5 resultados y aparecen más páginas en `next`/`previous`.
+c) En `config/settings.py`, en la clase `DefaultPagination` (`page_size = 10`). Si lo pasás a 5, cada página del listado trae 5 resultados y aparecen más páginas en `next`/`previous`.
 
 </details>
 
