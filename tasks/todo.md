@@ -1,6 +1,6 @@
 # Todo — Cervecería Los Flacheros
 
-29 tareas en 10 fases + 9 checkpoints (uno por fase; la Fase 9 es continua y no tiene checkpoint). Convención: cada tarea se cierra con su checklist de verificación en verde. Tamaños: XS | S | M.
+31 tareas en 10 fases + 9 checkpoints (uno por fase; la Fase 9 es continua y no tiene checkpoint; las Tasks 30 y 31 tienen fecha fija fuera de fase). Convención: cada tarea se cierra con su checklist de verificación en verde. Tamaños: XS | S | M.
 
 Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicación es material de estudio para la defensa oral, no relleno. El alcance completo, el glosario y el modelo de datos están en [`tasks/plan.md`](plan.md).
 
@@ -10,18 +10,22 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ### Task 1: Instalar uv y Docker Desktop
 
-**Descripción:** Instalar el gestor de entornos `uv` y Docker Desktop vía winget, y verificar que ambos respondan en una terminal nueva (el instalador agrega al PATH, pero la terminal abierta no lo ve). Concepto de Django implicado: ninguno todavía; es el requisito del docente de usar `uv` como gestor de entornos (requisito 12) y de dockerizar el proyecto (requisito 14).
+**Descripción:** Verificar el estado real del entorno (estado verificado el 19/10/2026: **uv 0.13.1 instalado**; **Docker Desktop YA está instalado** — cliente `docker` 29.8.2 + `docker compose` v5.6.0 en `C:\Program Files\Docker\Docker\resources\bin\`) y confirmar que el **motor** de Docker levanta (WSL2). Concepto de Django implicado: ninguno todavía; es el requisito del docente de usar `uv` como gestor de entornos (requisito 12) y de dockerizar el proyecto (requisito 14).
+
+Detalle práctico: `docker` **no está en el PATH de todas las consolas**: si un comando no lo encuentra, usar la ruta absoluta `C:\Program Files\Docker\Docker\resources\bin\docker.exe` o agregar esa carpeta al PATH del sistema.
 
 **Criterios de aceptación:**
-- [ ] `uv` instalado (`winget install --id=astral-sh.uv -e` o `irm https://astral.sh/uv/install.ps1 | iex`)
-- [ ] Docker Desktop instalado y en ejecución (icono en la bandeja)
-- [ ] Terminal NUEVA abierta: `uv --version` devuelve `0.13.2`
-- [ ] `docker --version` y `docker compose version` responden sin errores
+- [x] `uv` instalado (verificado: `uv --version` → `0.13.1`)
+- [x] Docker Desktop instalado (verificado: `docker --version` → 29.8.2, `docker compose version` → v5.6.0)
+- [ ] El **motor** responde: `docker info` devuelve el estado del daemon sin errores (esto es lo que falta confirmar; requiere WSL2 activo)
+- [ ] Terminal NUEVA abierta: `uv --version` y `docker compose version` responden sin errores
+
+**Plan B explícito (si el motor no levanta en esta máquina):** no dejar la tarea bloqueada. Verificar el build del stack en otra máquina/VM o en la del docente **antes del 1/11**, documentar el resultado en la nota de tarea (`docs/tareas/T01-...`) y seguir adelante: el `Dockerfile` y el `compose.yaml` se escriben igual (Tasks 21–22) y el resto del proyecto se desarrolla con SQLite local.
 
 **Verificación:**
 - [ ] Tests: N/A
-- [ ] Arranque: `uv --version && docker --version && docker compose version`
-- [ ] Manual: `uv python list` muestra Python 3.13 disponible
+- [ ] Arranque: `uv --version && docker --version && docker compose version` y `docker info`
+- [ ] Manual: `uv python list` muestra Python 3.13 disponible; `docker info` responde (o queda documentado el plan B)
 
 **Dependencias:** Ninguna
 **Archivos probables:** — (solo instalación)
@@ -86,7 +90,7 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 **Criterios de aceptación:**
 - [ ] `manage.py` y paquete `config/` (settings.py, urls.py, wsgi.py, asgi.py) existen
 - [ ] App `core/` creada y agregada a `INSTALLED_APPS`
-- [ ] `REST_FRAMEWORK` con TokenAuthentication + SessionAuthentication, `IsAuthenticated` global, `PageNumberPagination` (`PAGE_SIZE=10`), filter backends y `DEFAULT_SCHEMA_CLASS` de drf-spectacular
+- [ ] `REST_FRAMEWORK` con TokenAuthentication + SessionAuthentication, `IsAuthenticated` global, `DEFAULT_PAGINATION_CLASS = "config.settings.DefaultPagination"` (clase propia con `page_size = 10`, `page_size_query_param = "page_size"` y `max_page_size = 50`; no la `PageNumberPagination` de fábrica, que no acepta `?page_size=`), filter backends y `DEFAULT_SCHEMA_CLASS` de drf-spectacular
 - [ ] `SPECTACULAR_SETTINGS` con TITLE/DESCRIPTION/VERSION
 - [ ] `CorsMiddleware` como primer middleware; `whitenoise` en su lugar (sección 9 del plan)
 - [ ] Settings leen `.env` con django-environ (SECRET_KEY, DEBUG, ALLOWED_HOSTS, DATABASE_URL, CORS_ALLOWED_ORIGINS)
@@ -121,19 +125,20 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ### Task 6: URLs del proyecto, documentación y token
 
-**Descripción:** Definir el mapa de URLs del proyecto: `/`, `/admin/`, el router de la API en `/api/` (aún vacío), el schema con Swagger y ReDoc, y el endpoint de token. Conceptos de Django en juego: **urls.py** (mapeo URL → vista) y **Browsable API** de DRF (DRF sirve una interfaz navegable en cada endpoint, que es la "API navegable" del requisito 9).
+**Descripción:** Definir el mapa de URLs del proyecto: `/`, `/admin/`, el router de la API en `/api/` (aún vacío), el schema con Swagger y ReDoc, el endpoint de token y el login de sesión en `/api-auth/`. Conceptos de Django en juego: **urls.py** (mapeo URL → vista) y **Browsable API** de DRF (DRF sirve una interfaz navegable en cada endpoint, que es la "API navegable" del requisito 9; con `rest_framework.urls` montado en `/api-auth/` esa interfaz tiene además botón de login/logout).
 
 **Criterios de aceptación:**
 - [ ] `/api/schema/` devuelve el schema OpenAPI
 - [ ] `/api/schema/swagger-ui/` y `/api/schema/redoc/` cargan sus UIs
 - [ ] `BrowsableAPIRenderer` en `DEFAULT_RENDERER_CLASSES`
+- [ ] `path("api-auth/", include("rest_framework.urls"))` en `config/urls.py`: la Browsable API tiene botón de login/logout (autenticación por sesión, requisito literal)
 - [ ] `POST /api/auth-token/` con `{username, password}` devuelve `{token}` (probar con un superusuario creado con `uv run python manage.py createsuperuser`)
 - [ ] `uv run python manage.py spectacular --validate` sin errores
 
 **Verificación:**
 - [ ] Tests: N/A
 - [ ] Arranque: `uv run python manage.py runserver`
-- [ ] Manual: abrir Swagger y ReDoc; pedir un token en `/api/auth-token/`
+- [ ] Manual: abrir Swagger y ReDoc; pedir un token en `/api/auth-token/`; abrir `/api-auth/login/` y loguearse desde la Browsable API
 
 **Dependencias:** Task 4
 **Archivos probables:** `backend/config/urls.py`, `backend/config/settings.py`
@@ -146,7 +151,7 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 - [ ] `manage.py check` limpio
 - [ ] `/` renderiza la bienvenida con la marca
 - [ ] Swagger y ReDoc responden
-- [ ] `/api/auth-token/` emite tokens
+- [ ] `/api/auth-token/` emite tokens y `/api-auth/` muestra el login de la Browsable API
 
 ---
 
@@ -261,12 +266,13 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ### Task 12: Registrar los 10 modelos en el admin
 
-**Descripción:** Configurar un `ModelAdmin` por modelo con `list_display`, `list_filter`, `search_fields` y `ordering`. Concepto de Django en juego: **admin autogenerado** — registrando la clase en `admin.py` obtenemos una interfaz CRUD completa gratis; los cuatro atributos de arriba son exactamente lo que el docente pide mostrar en el panel (requisito 11: filtros, ordenamiento y búsqueda).
+**Descripción:** Configurar un `ModelAdmin` por modelo con `list_display`, `list_filter`, `search_fields` y `ordering`. Concepto de Django en juego: **admin autogenerado** — registrando la clase en `admin.py` obtenemos una interfaz CRUD completa gratis; los cuatro atributos de arriba son exactamente lo que el docente pide mostrar en el panel (requisito 11: filtros, ordenamiento y búsqueda). Los tres atributos van en los **10 modelos**: el costo es cero (una línea por atributo) y el docente pide "control total" desde el panel.
 
 **Criterios de aceptación:**
 - [ ] Los 10 modelos registrados en `core/admin.py`
 - [ ] `search_fields` con joins (ej. Lote: `numero`, `cerveza__nombre`; Pedido: `cliente__nombre`, `cliente__apellido`)
-- [ ] `list_filter` en al menos 5 modelos (tipo, estado, activo)
+- [ ] `list_filter` en los **10 modelos** (tipo, estado, activo, etc.)
+- [ ] `ordering` también en los 10 modelos
 - [ ] Admin carga sin errores y filtros/búsqueda funcionan
 
 **Verificación:**
@@ -330,13 +336,15 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ### Task 15: ViewSets, router y permisos globales
 
-**Descripción:** Implementar los 10 `ModelViewSet` en `core/views.py`, registrarlos en un `DefaultRouter` montado en `/api/` y aplicar los permisos (`IsAuthenticated` global, `IsAdminOrReadOnly` en Estilo y Proveedor). Conceptos de Django/DRF en juego: **ViewSet + router** — un ViewSet por modelo da CRUD completo y el router genera las URLs y la documentación sin escribir vistas una por una; **permisos declarativos** — DRF chequea el permiso antes de entrar al ViewSet.
+**Descripción:** Implementar los 10 `ModelViewSet` en `core/views.py`, registrarlos en un `DefaultRouter` montado en `/api/` y aplicar los permisos con la regla única del plan (sin `IsAdminOrReadOnly`): lectura = `IsAuthenticated` global (cualquier usuario autenticado); escritura = `IsAdminUser` (solo staff) en los 8 ViewSets que no son el mostrador; `Pedido` y `LineaPedido` se quedan con `IsAuthenticated` porque es el mostrador (cualquier autenticado crea y edita). Conceptos de Django/DRF en juego: **ViewSet + router** — un ViewSet por modelo da CRUD completo y el router genera las URLs y la documentación sin escribir vistas una por una; **permisos declarativos** — DRF chequea el permiso antes de entrar al ViewSet (el permiso por acción de escritura se aplica con `get_permissions()`, una línea por ViewSet).
 
 **Criterios de aceptación:**
 - [ ] 10 ViewSets registrados en `core/urls.py` con los prefijos de la sección 8 del plan
-- [ ] `IsAdminOrReadOnly` en EstiloViewSet y ProveedorViewSet; el resto `IsAuthenticated`
+- [ ] Lectura: `IsAuthenticated` global — GET sin token → 401 en **todos** los endpoints (no hay lectura anónima)
+- [ ] Escritura (`create`/`update`/`partial_update`/`destroy`) con `IsAdminUser` en estilos, cervezas, lotes, etapas, proveedores, materias-primas, clientes y opiniones
+- [ ] `Pedido` y `LineaPedido`: cualquier usuario autenticado crea y edita (es el mostrador)
 - [ ] Paginación visible: `GET /api/cervezas/` devuelve `count`, `next`, `previous`, `results`
-- [ ] GET sin token → 401; POST con token válido → 201
+- [ ] GET sin token → 401; POST con token de staff → 201; POST con token normal en `/api/pedidos/` → 201
 
 **Verificación:**
 - [ ] Tests: N/A
@@ -386,9 +394,9 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 **Archivos probables:** `backend/core/views.py`, `backend/core/serializers.py`
 **Escala:** M
 
-### Task 18: Filtros, búsqueda y ordenamiento
+### Task 18: Filtros, búsqueda y ordenamiento + acciones `avanzar` y cierre de `estadisticas`
 
-**Descripción:** Configurar `DjangoFilterBackend`, `SearchFilter` y `OrderingFilter` en los ViewSets, con el foco en `Cerveza` (el requisito 8 se cumple ahí) y el resto según la tabla de la sección 8 del plan. Concepto de DRF en juego: **filter backends** — DRF aplica los query params (`?tipo=`, `?search=`, `?ordering=`) antes de serializar; `django-filter` valida los filtros de campos y FK, `SearchFilter` hace el `ILIKE` y `OrderingFilter` ordena.
+**Descripción:** Configurar `DjangoFilterBackend`, `SearchFilter` y `OrderingFilter` en los ViewSets, con el foco en `Cerveza` (el requisito 8 se cumple ahí) y el resto según la tabla de la sección 8 del plan. Además se cierran las acciones de negocio de la Fase 4: `avanzar` (comprometida, ya no es opcional) y el detalle del serializer de `estadisticas` con base vacía. Concepto de DRF en juego: **filter backends** — DRF aplica los query params (`?tipo=`, `?search=`, `?ordering=`) antes de serializar; `django-filter` valida los filtros de campos y FK, `SearchFilter` hace el `ILIKE` y `OrderingFilter` ordena.
 
 **Criterios de aceptación:**
 - [ ] Cerveza: filtros `estilo`, `tipo`, `activo`; search `nombre`, `descripcion`; ordering `precio`, `nombre`, `-fecha_creacion`
@@ -396,14 +404,16 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 - [ ] MateriaPrima: filtros `tipo`, `proveedor`; search `nombre`; ordering `tipo`, `nombre`
 - [ ] Estilos, Proveedores, Clientes, Lotes, Etapas, Líneas y Opiniones con search u ordering según la sección 8
 - [ ] `GET /api/cervezas/?tipo=GRIFO&search=ipa&ordering=-fecha_creacion` responde 200
+- [ ] `POST /api/lotes/{id}/avanzar/` implementada (`@action(detail=True, url_path="avanzar")`, permiso `IsAdminUser`): avanza el estado validando la transición; un salto inválido responde 400; aparece en Swagger y la consume el frontend
+- [ ] `EstadisticasPedidoSerializer` usa `allow_null=True` en `monto_total` y `promedio_ticket` (para no romper con base vacía) y el seed (Task 25) corre antes de las capturas (Task 26)
 
 **Verificación:**
 - [ ] Tests: N/A (la Task 23 los cubre)
 - [ ] Arranque: `uv run python manage.py runserver`
-- [ ] Manual: probar filtros combinados y un `ordering` inválido (debe ignorarlo, no romper)
+- [ ] Manual: probar filtros combinados y un `ordering` inválido (debe ignorarlo, no romper); probar `avanzar` con un lote en cada estado
 
-**Dependencias:** Task 15, Task 16
-**Archivos probables:** `backend/core/views.py`
+**Dependencias:** Task 15, Task 16, Task 17
+**Archivos probables:** `backend/core/views.py`, `backend/core/serializers.py`
 **Escala:** M
 
 ---
@@ -412,9 +422,9 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 - [ ] 10 endpoints responden paginados con token
 - [ ] Nested (`etapas`/`lineas`) presente SOLO en list
-- [ ] `en_grifo` y `estadisticas` funcionando con permisos correctos
+- [ ] `en_grifo` y `estadisticas` funcionando con permisos correctos; `avanzar` funcionando en Task 18
 - [ ] Filtros/búsqueda/orden funcionando, con `Cerveza` completo
-- [ ] Swagger muestra las 10 rutas y las 2 acciones
+- [ ] Swagger muestra las 10 rutas y las 3 acciones
 
 ---
 
@@ -477,7 +487,7 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 **Descripción:** Escribir el Dockerfile single-stage con uv y el `compose.yaml` con Postgres 17, healthcheck y comando de arranque. Concepto de Django en juego: **punto de entrada WSGI** — el contenedor no usa `runserver` sino `gunicorn config.wsgi:application`, el servidor de producción que carga el `wsgi.py` del proyecto.
 
 **Criterios de aceptación:**
-- [ ] Dockerfile single-stage sobre `python:3.13-slim`, copiando `uv`/`uvx` desde `ghcr.io/astral-sh/uv:0.13.2`, sin `--mount=type=cache`
+- [ ] Dockerfile single-stage sobre `python:3.13-slim`, copiando `uv`/`uvx` desde `ghcr.io/astral-sh/uv:0.13.1`, sin `--mount=type=cache`
 - [ ] `uv sync --frozen --no-install-project --no-dev` y después `uv sync --frozen --no-dev`
 - [ ] `compose.yaml` con `db` (postgres:17 + healthcheck `pg_isready`) y `web` (`depends_on: condition: service_healthy`)
 - [ ] Comando `web`: `migrate` + `collectstatic --noinput` + `gunicorn`
@@ -524,13 +534,14 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ## Fase 7 — Tests y calidad (29-30 oct)
 
-### Task 23: core/tests.py con los ~12 tests
+### Task 23: core/tests.py con los 13 tests
 
-**Descripción:** Escribir el único archivo de tests del proyecto con los 12 tests de la sección 12 del plan: modelos, permisos 401/403, paginación, nested solo en list, las dos `@action` y filtros. Concepto de Django en juego: **`APIClient` de DRF + `pytest-django`** — los tests de API simulan requests HTTP reales contra las URLs, que es la forma honesta de verificar que la API hace lo que dice el contrato.
+**Descripción:** Escribir el único archivo de tests del proyecto con los 13 tests de la sección 12 del plan: modelos, permisos 401/403, sesión con `force_login`, paginación, nested solo en list, las acciones `@action` y filtros. Concepto de Django en juego: **`APIClient` de DRF + `pytest-django`** — los tests de API simulan requests HTTP reales contra las URLs, que es la forma honesta de verificar que la API hace lo que dice el contrato.
 
 **Criterios de aceptación:**
-- [ ] 12 tests en `core/tests.py` (los nombres de la sección 12 del plan)
+- [ ] 13 tests en `core/tests.py` (los nombres de la sección 12 del plan)
 - [ ] 401 sin token y 200 con token cubiertos
+- [ ] `test_sesion_ya_autenticado_devuelve_200`: login con `django.test.Client` (`client.login(...)` o `force_login`) y `GET /api/cervezas/` → 200, mientras el mismo GET sin autenticar → 401
 - [ ] `etapas`/`lineas` presentes en list y ausentes en detail
 - [ ] `estadisticas` → 403 sin staff, 200 con staff
 - [ ] Filtro `?tipo=GRIFO` y búsqueda `?search=ipa` cubiertos
@@ -568,7 +579,7 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ### Checkpoint: Fase 7
 
-- [ ] `pytest` verde (12 tests)
+- [ ] `pytest` verde (13 tests)
 - [ ] `ruff check` y `ruff format` limpios
 - [ ] `makemigrations --check` limpio
 - [ ] `spectacular --validate` limpio
@@ -638,11 +649,11 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ### Task 28: Checklist de requisitos y ensayo de defensa
 
-**Descripción:** Recorrer el checklist de los 17 requisitos de abajo, hacer el merge final a `main` y ensayar la defensa oral. Concepto de Django en juego: ninguno nuevo; el ensayo cubre DRF, ViewSets, serializers anidados, `@action`, permisos, CORS y por qué una app única.
+**Descripción:** Recorrer el checklist de los **21 requisitos (R1–R21)** de abajo, hacer el merge final a `main`, publicar el repo en GitHub (Task 31) y ensayar la defensa oral. Concepto de Django en juego: ninguno nuevo; el ensayo cubre DRF, ViewSets, serializers anidados, `@action`, permisos, CORS y por qué una app única.
 
 **Criterios de aceptación:**
-- [ ] Checklist de los 17 requisitos en verde o con justificación explícita de la columna Estado
-- [ ] Última versión en `main` vía merge `--no-ff` de la última feature
+- [ ] Checklist de los 21 requisitos (R1–R21) en verde o con justificación explícita; la matriz completa con evidencia vive en `docs/08-trazabilidad-requisitos.md`
+- [ ] Última versión en `main` vía merge `--no-ff` de la última feature y repo publicado en GitHub (Task 31)
 - [ ] Ensayo de defensa: explicar framework, modelos/relaciones, ViewSets, nested, `@action`, permisos, token vs sesión, CORS y el proceso Git
 
 **Verificación:**
@@ -661,7 +672,8 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 - [ ] Datos seed cargados y credenciales demo documentadas
 - [ ] Capturas en `docs/capturas/` y embebidas en el README
 - [ ] `main` al día con merges `--no-ff`
-- [ ] Checklist de los 17 requisitos en verde y ensayo de defensa hecho
+- [ ] Repositorio de GitHub publicado con `main` al día (Task 31)
+- [ ] Checklist de los 21 requisitos (R1–R21) en verde y ensayo de defensa hecho
 
 ---
 
@@ -691,25 +703,81 @@ Cada tarea explica **qué concepto de Django se usa y por qué**: esa explicaci�
 
 ---
 
+## Tareas con fecha fija (fuera de fase)
+
+### Task 30: Crear el README.md raíz (esqueleto §13 + diagrama ER)
+
+**Fecha:** 25/10 · **Responsable:** usuario (backend) · **Escala:** S
+
+**Descripción:** Crear el `README.md` raíz con el esqueleto de la sección 13 del plan: portada con la identidad de marca (nombre "Cervecería Los Flacheros", lema "Arte en cada trago, tradición en cada lote", paleta `#F5A623` `#4A7C59` `#8B4513` `#F7F7F7` `#2B2B2B`), objetivo, **diagrama ER en mermaid copiado de `tasks/plan.md` §7**, stack, instalación, tabla de endpoints, sección de capturas con placeholders, credenciales de prueba, comandos útiles, proceso del equipo y autores. Es el esqueleto que la Task 27 completa en la Fase 8 (capturas reales, credenciales exactas y cierre de texto); se crea temprano para que el requisito "planificación de tablas adjunta al README" exista en el repo desde la primera semana.
+
+**Criterios de aceptación:**
+- [ ] `README.md` raíz creado con la portada de marca (nombre, lema y paleta)
+- [ ] Diagrama ER (mermaid) copiado de `tasks/plan.md` §7 y renderizado
+- [ ] Secciones de la §13 presentes: objetivo, stack, instalación, tabla de endpoints, capturas (placeholders), credenciales (placeholders), comandos útiles, proceso del equipo y autores
+- [ ] Marcadores claros de lo que se completa en la Task 27
+
+**Verificación:**
+- [ ] Tests: N/A (documento)
+- [ ] Arranque: N/A
+- [ ] Manual: abrir el README en el repo y ver el diagrama ER renderizado
+
+**Dependencias:** Task 3
+**Archivos probables:** `README.md`
+**Escala:** S
+
+### Task 31: Publicar el proyecto en GitHub y dejar main al día
+
+**Fecha:** 1/11 · **Responsable:** el usuario (crea la cuenta y el repo si hace falta) · **Escala:** S
+
+**Descripción:** Publicar el proyecto en un repositorio remoto de GitHub (privado o público, a decisión del equipo) con la última versión de `main`, y subir cada rama `feature/*` como **pull request** hacia `main` (el docente pide "pull requests" explícitamente). Es el requisito de entrega R19/R18 de `docs/08-trazabilidad-requisitos.md`.
+
+Pasos concretos:
+1. Crear el repo en GitHub (cuenta del usuario; `gh repo create` o desde la web).
+2. `git remote add origin <url-del-repo>`
+3. `git push -u origin main`
+4. Por cada rama `feature/*` viva: `git push -u origin feature/<tarea>` y abrir un pull request hacia `main`; cerrarlo con merge (merge commit, no squash, para conservar la historia).
+
+**Criterios de aceptación:**
+- [ ] Repo remoto creado y `origin` configurado (`git remote -v`)
+- [ ] `git push -u origin main` hecho; el `main` del remoto igual al local (`git log` coincide)
+- [ ] Cada rama `feature/*` publicada como pull request hacia `main`
+- [ ] La URL del repo queda registrada (en el README o en la nota de tarea) para el docente
+- [ ] Sin secretos en el remoto (el `.env` nunca se pushea)
+
+**Verificación:**
+- [ ] Tests: N/A
+- [ ] Arranque: N/A
+- [ ] Manual: abrir el repo en GitHub y confirmar `main` al día y los PRs cerrados
+
+**Dependencias:** Task 28 (merge final a `main`)
+**Archivos probables:** — (solo git/GitHub) + `README.md` (URL del repo)
+**Escala:** S
+
+---
+
 ## Checklist contra requisitos del docente
 
-| # | Requisito | Cubierto en | Estado |
-|---|---|---|---|
-| 1 | ≥10 modelos con relaciones | Task 7–10, 11 (10 modelos) | Pendiente |
-| 2 | Planificación de tablas adjunta al README | Task 27 (diagrama ER en README), `tasks/plan.md` | Pendiente |
-| 3 | API REST con ≥8 de 10 modelos vía ViewSet | Task 15 (10 ViewSets) | Pendiente |
-| 4 | ≥2 ViewSets CRUD con datos anidados SOLO en `list` | Task 16 (Lote y Pedido) | Pendiente |
-| 5 | Autenticación por Sesión y Tokens | Task 4, 6 | Pendiente |
-| 6 | ≥2 funciones personalizadas con `@action` | Task 17 (`en_grifo`, `estadisticas`) | Pendiente |
-| 7 | Endpoints de get all paginados | Task 15 (paginación global) | Pendiente |
-| 8 | ≥1 ViewSet con filtros y búsquedas | Task 18 (Cerveza completo + el resto) | Pendiente |
-| 9 | Documentación OpenAPI/Swagger/ReDoc + API navegable | Task 6 (schema, Swagger, ReDoc, Browsable API) | Pendiente |
-| 10 | Vista principal con template de bienvenida | Task 5 | Pendiente |
-| 11 | Panel de admin con filtros, ordenamiento y búsqueda | Task 12, 13 | Pendiente |
-| 12 | uv como gestor de entornos | Task 1, 2 | Pendiente |
-| 13 | CORS configurado para el frontend | Task 19 | Pendiente |
-| 14 | Proyecto dockerizado | Task 21, 22 | Pendiente |
-| 15 | Evidencia de proceso Git: ramas `feature/*`, commits descriptivos y merges a `main` | Task 3, 28 | Pendiente |
-| 16 | `README.md` con diagrama ER y capturas del proyecto funcionando | Task 26, 27, 28 | Pendiente |
-| 17 | Defensa oral explicando el framework | Task 28 (ensayo) | Pendiente |
-| 18 | Documentación de aprendizaje en `docs/` (guías conceptuales + cuaderno de defensa + notas por tarea) | Task 29, y notas de cada tarea | Pendiente |
+La matriz completa (**R1–R21**, con evidencia detallada y estado) vive en [`docs/08-trazabilidad-requisitos.md`](../docs/08-trazabilidad-requisitos.md). Este es el checklist accionable de la entrega (se recorre en la Task 28):
+
+- [ ] **R1** ≥10 modelos con relaciones — Tasks 7–11 (10 modelos en `core/models.py`)
+- [ ] **R2** Modelos relevantes para la temática de la cervecería — Tasks 7–11
+- [ ] **R3** Relaciones entre modelos (`on_delete` según el negocio) — Tasks 7–10
+- [ ] **R4** Planificación de tablas adjunta al README (diagrama ER) — Task 30 (esqueleto) y Task 27 (cierre)
+- [ ] **R5** API REST para el frontend (DRF + router en `/api/`) — Tasks 4, 14, 15
+- [ ] **R6** ≥8 de los 10 modelos con endpoint vía ViewSet — Task 15 (los 10)
+- [ ] **R7** ≥2 ViewSets con datos anidados SOLO en `list` — Task 16 (Lote y Pedido)
+- [ ] **R8** Autenticación por sesión y por token — Tasks 4 y 6 (token + `/api-auth/`)
+- [ ] **R9** ≥2 funciones personalizadas con `@action` — Tasks 17 y 18 (`en_grifo`, `estadisticas`, `avanzar`)
+- [ ] **R10** Endpoints de get all paginados — Tasks 4 y 15 (`DefaultPagination`, tope 50)
+- [ ] **R11** ≥1 ViewSet con filtros y búsquedas — Task 18 (Cerveza completo + el resto)
+- [ ] **R12** Documentación OpenAPI/Swagger/ReDoc + API navegable — Task 6
+- [ ] **R13** Vista principal con template de bienvenida — Task 5
+- [ ] **R14** Panel de admin con filtros, ordenamiento y búsqueda (control total en los 10 modelos) — Tasks 12 y 13
+- [ ] **R15** uv como gestor de entornos — Tasks 1 y 2
+- [ ] **R16** CORS configurado para el frontend — Tasks 4 y 19
+- [ ] **R17** Proyecto dockerizado — Tasks 21 y 22
+- [ ] **R18** Proceso Git: ramas `feature/*`, pull requests y commits descriptivos — Tasks 3, 28 y 31
+- [ ] **R19** Repositorio de GitHub publicado con `main` al día — Task 31
+- [ ] **R20** `README.md` con diagrama ER y capturas — Tasks 26, 27 y 28 (esqueleto en Task 30)
+- [ ] **R21** Entrega el lunes 2/11; defensa el martes 3/11 — Task 28 (cierre) y Task 31

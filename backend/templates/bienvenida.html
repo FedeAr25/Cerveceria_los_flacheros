@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cervecería Los Flacheros — API</title>
+  <meta name="description" content="Backend de gestión de la Cervecería Los Flacheros: API REST documentada, admin y OpenAPI.">
+  <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+</head>
+<body>
+  <header class="encabezado">
+    <h1>Cervecería Los Flacheros</h1>
+    <p class="lema">«Arte en cada trago, tradición en cada lote»</p>
+  </header>
+
+  <main id="contenido">
+    <section aria-labelledby="titulo-bienvenida">
+      <h2 id="titulo-bienvenida">¡Bienvenidos al backend de la cervecería!</h2>
+      <p>
+        Este es el servidor de gestión artesanal: lotes, cervezas, pedidos y
+        opiniones viven acá. Todo se consume por una API REST documentada con
+        OpenAPI.
+      </p>
+    </section>
+
+    <section aria-labelledby="titulo-enlaces">
+      <h2 id="titulo-enlaces">Enlaces útiles</h2>
+      <ul class="enlaces">
+        <li><a href="/api/">Índice de la API (API navegable)</a></li>
+        <li><a href="/api/schema/swagger-ui/">Documentación Swagger UI</a></li>
+        <li><a href="/api/schema/redoc/">Documentación ReDoc</a></li>
+        <li><a href="/admin/">Panel de administración</a></li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="titulo-auth">
+      <h2 id="titulo-auth">Autenticación</h2>
+      <p>
+        Pedí tu token con <code>POST /api/auth-token/</code> enviando
+        <code>{"username": "...", "password": "..."}</code> y usalo en cada
+        request como <code>Authorization: Token &lt;key&gt;</code>.
+      </p>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>Cervecería Los Flacheros &middot; EFI Ingeniería de Software 2026 &middot; Django 5.2 + DRF</p>
+  </footer>
+</body>
+</html>
