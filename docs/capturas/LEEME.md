@@ -28,20 +28,35 @@ y usalo en cada request como `Authorization: Token <clave>`.
 
 ## Las 10 capturas
 
-| # | Archivo | Qué muestra | Cómo obtenerlo |
-|---|---|---|---|
-| 1 | `bienvenida.png` | Vista de bienvenida con paleta y lema | Abrir <http://localhost:8000/> en el navegador |
-| 2 | `swagger-ui.png` | Swagger UI con los 10 endpoints y las 3 acciones | Abrir <http://localhost:8000/api/schema/swagger-ui/> |
-| 3 | `redoc.png` | ReDoc con el esquema OpenAPI | Abrir <http://localhost:8000/api/schema/redoc/> |
-| 4 | `browsable-api.png` | API navegable logueada por sesión | Abrir <http://localhost:8000/api/>, entrar con sesión en `/api-auth/` y expandir un endpoint |
-| 5 | `admin-filtros.png` | Admin de cervezas con filtros, búsqueda y orden | Entrar en <http://localhost:8000/admin/> → Cervezas; aplicar un filtro (ej.: `tipo = GRIFO`) y una búsqueda |
-| 6 | `admin-pedidos-inline.png` | Admin de un pedido con el inline de líneas | Admin → Pedidos → un pedido con líneas: se ven editadas en la misma pantalla |
-| 7 | `api-pedidos-nested.png` | `GET /api/pedidos/` **con** `lineas` anidadas | `curl -s -H "Authorization: Token <clave>" "http://localhost:8000/api/pedidos/?page_size=5"` (o abrir la URL en el navegador con sesión) |
-| 8 | `api-lote-detalle.png` | `GET /api/lotes/{id}/` **sin** anidar (contraste) | `curl -s -H "Authorization: Token <clave>" "http://localhost:8000/api/lotes/1/"` |
-| 9 | `api-estadisticas.png` | Acción `estadisticas` con los datos del seed | `curl -s -H "Authorization: Token <clave>" "http://localhost:8000/api/pedidos/estadisticas/"` con usuario **staff** (sin staff responde `403`) |
-| 10 | `frontend.png` | Frontend de Ema (si está listo) | `npm run dev` en `frontend/` → <http://localhost:3000/> |
+| # | Archivo | Estado | Qué muestra | Cómo obtenerlo |
+|---|---|---|---|---|
+| 1 | `bienvenida.png` | ✅ Hecha | Vista de bienvenida con paleta y lema | Abrir <http://localhost:8000/> en el navegador |
+| 2 | `swagger-ui.png` | ✅ Hecha | Swagger UI con los 10 endpoints y las 3 acciones | Abrir <http://localhost:8000/api/schema/swagger-ui/> |
+| 3 | `redoc.png` | ✅ Hecha | ReDoc con el esquema OpenAPI | Abrir <http://localhost:8000/api/schema/redoc/> |
+| 4 | `browsable-api.png` | ✅ Hecha | API navegable logueada por sesión | Abrir <http://localhost:8000/api/>, entrar con sesión en `/api-auth/` y expandir un endpoint |
+| 5 | `admin-filtros.png` | ✅ Hecha | Admin de cervezas con filtros, búsqueda y orden | Entrar en <http://localhost:8000/admin/> → Cervezas; aplicar un filtro (ej.: `tipo = GRIFO`) y una búsqueda |
+| 6 | `admin-pedidos-inline.png` | ✅ Hecha | Admin de un pedido con el inline de líneas | Admin → Pedidos → un pedido con líneas: se ven editadas en la misma pantalla |
+| 7 | `api-pedidos-nested.png` | ✅ Hecha | `GET /api/pedidos/` **con** `lineas` anidadas | `curl -s -H "Authorization: Token <clave>" "http://localhost:8000/api/pedidos/?page_size=5"` (o abrir la URL en el navegador con sesión) |
+| 8 | `api-lote-detalle.png` | ✅ Hecha | `GET /api/lotes/{id}/` **sin** anidar (contraste) | `curl -s -H "Authorization: Token <clave>" "http://localhost:8000/api/lotes/1/"` |
+| 9 | `api-estadisticas.png` | ✅ Hecha | Acción `estadisticas` con los datos del seed | `curl -s -H "Authorization: Token <clave>" "http://localhost:8000/api/pedidos/estadisticas/"` con usuario **staff** (sin staff responde `403`) |
+| 10 | `frontend.png` | ⏳ **Pendiente (Ema)** | Frontend de Ema | `npm run dev` en `frontend/` → <http://localhost:3000/> — el archivo **no existe todavía**; el README reserva su lugar con un texto en vez de una imagen rota |
 
 Para JSON legibles en terminal: `curl -s ... | python -m json.tool` (o el botón "Pretty print" del navegador).
+
+## Cómo se tomaron realmente (19/10/2026)
+
+Las 9 capturas del backend se tomaron con **Playwright usando el Chrome del sistema**, porque los navegadores que Playwright baja por defecto no están instalados en la máquina de desarrollo. El patrón, en un script temporal corrido con `uv run --with playwright python <script>.py` desde `backend/`:
+
+```python
+browser = p.chromium.launch(channel="chrome", headless=True)
+page = browser.new_page(viewport={"width": 1400, "height": 900})
+page.goto("http://localhost:8000/")
+page.screenshot(path="../docs/capturas/bienvenida.png", full_page=True)
+```
+
+`channel="chrome"` le indica a Playwright que use el Chrome ya instalado en el sistema en lugar de descargar Chromium. Para los JSON de la API se abrieron las URLs directamente en el navegador, en lugar de curl, para que la captura muestre el render legible.
+
+**Detalle técnico de `redoc.png`:** ReDoc necesitó fijarse a una build **UMD** del CDN (variable `REDOC_DIST` en los settings): la build "latest" que servía el CDN pasó a ser solo ESM y dejaba la página `/api/schema/redoc/` completamente en blanco. Con la versión UMD fijada, ReDoc renderiza correctamente (queda registrado en las "Notas de implementación" del README).
 
 ## Reglas
 

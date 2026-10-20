@@ -54,9 +54,11 @@ La paleta y el lema se ven en la vista de bienvenida (`/`) y en el panel de admi
 10. [Capturas de pantalla](#10-capturas-de-pantalla)
 11. [Datos de prueba](#11-datos-de-prueba)
 12. [Comandos útiles](#12-comandos-útiles)
-13. [Proceso del equipo (Git)](#13-proceso-del-equipo-git)
-14. [Estado de la entrega](#14-estado-de-la-entrega)
-15. [Autores](#15-autores)
+13. [Verificación](#13-verificación)
+14. [Notas de implementación](#14-notas-de-implementación)
+15. [Proceso del equipo (Git)](#15-proceso-del-equipo-git)
+16. [Estado de la entrega](#16-estado-de-la-entrega)
+17. [Autores](#17-autores)
 
 ## 2. Objetivo y alcance
 
@@ -189,13 +191,13 @@ uv run python manage.py runserver
 
 ```bash
 cd backend
-cp .env.example .env         # si falta, compose falla al no encontrar el archivo
+cp .env.example .env         # paso previo obligatorio: si falta, compose falla al no encontrar el archivo
 docker compose up --build
 ```
 
+- **Estado (19/10/2026):** el [`Dockerfile`](backend/Dockerfile) y el [`compose.yaml`](backend/compose.yaml) **ya están escritos y validados** (`docker compose config` no reporta errores), pero **el build todavía no se ejecutó**: el motor de Docker de la máquina de desarrollo no levanta (falta WSL2). Queda como verificación pendiente antes de la entrega.
+- Pasos de verificación pendientes: 1) `docker compose config` (ya pasa) → 2) `docker compose up --build` → 3) `docker compose ps` en verde → 4) admin **con estilos** y API respondiendo en <http://localhost:8000/admin/> y `/api/`.
 - Levanta `db` (PostgreSQL 17 con healthcheck) y `web` (migra, `collectstatic` y sirve con gunicorn en el puerto 8000).
-- Verificación: `docker compose ps` en verde y el admin visible **con estilos** en <http://localhost:8000/admin/>.
-- Nota de estado: el `Dockerfile` y el `compose.yaml` se escriben en la Fase 6 (Tasks 21–22 de [`tasks/todo.md`](tasks/todo.md)); hasta entonces esta opción se documenta pero no está disponible.
 
 ### Sobre el `.env`
 
@@ -305,20 +307,20 @@ Los **10 modelos** están registrados en [`backend/core/admin.py`](backend/core/
 
 ## 10. Capturas de pantalla
 
-> **Nota:** las imágenes se incorporan en la **Fase 8 (Task 26)**, después del seed de datos (Task 25). Hasta entonces, las referencias siguientes aparecerán como imágenes rotas en GitHub. La guía de qué capturar, cómo y con qué comando está en **[`docs/capturas/LEEME.md`](docs/capturas/LEEME.md)**.
+> **Estado (19/10/2026):** las **9 capturas del backend** ya están tomadas y viven en [`docs/capturas/`](docs/capturas/) — son la evidencia en pantalla de los requisitos: vista de bienvenida, documentación OpenAPI (Swagger y ReDoc), API navegable, panel de administración y las respuestas de la API con y sin datos anidados. La guía de qué capturar, cómo y con qué comando (incluida la forma real en que se tomaron) está en **[`docs/capturas/LEEME.md`](docs/capturas/LEEME.md)**. La única captura pendiente es `frontend.png`, que depende del frontend de Ema.
 
-| # | Captura | Qué muestra |
-|---|---|---|
-| 1 | Vista de bienvenida | Template con identidad de marca en `/` |
-| 2 | Swagger UI | Documentación interactiva de la API |
-| 3 | ReDoc | Documentación OpenAPI en formato libro |
-| 4 | API navegable | Browsable API de DRF con login de sesión |
-| 5 | Admin de cervezas | Filtros, búsqueda y orden en el panel |
-| 6 | Admin de pedidos | Inline de líneas de pedido |
-| 7 | `GET /api/pedidos/` | Listado **con** `lineas` anidadas |
-| 8 | `GET /api/lotes/{id}/` | Detalle **sin** anidar (contraste con el listado) |
-| 9 | `estadisticas` | Acción admin con los datos del seed |
-| 10 | Frontend | Pantalla del frontend de Ema (si está listo) |
+| # | Archivo | Estado | Qué muestra |
+|---|---|---|---|
+| 1 | `bienvenida.png` | ✅ | Template con identidad de marca en `/` (R13) |
+| 2 | `swagger-ui.png` | ✅ | Documentación interactiva de la API (R12) |
+| 3 | `redoc.png` | ✅ | Documentación OpenAPI en formato libro (R12) |
+| 4 | `browsable-api.png` | ✅ | Browsable API de DRF con login de sesión (R12) |
+| 5 | `admin-filtros.png` | ✅ | Filtros, búsqueda y orden en el admin de cervezas (R14) |
+| 6 | `admin-pedidos-inline.png` | ✅ | Inline de líneas de pedido en el admin (R14) |
+| 7 | `api-pedidos-nested.png` | ✅ | `GET /api/pedidos/` **con** `lineas` anidadas (R7) |
+| 8 | `api-lote-detalle.png` | ✅ | `GET /api/lotes/{id}/` **sin** anidar (contraste con el listado, R7) |
+| 9 | `api-estadisticas.png` | ✅ | Acción `estadisticas` con los datos del seed (R9) |
+| 10 | `frontend.png` | ⏳ | Pantalla del frontend de Ema — **pendiente del frontend** |
 
 ![Vista de bienvenida con la identidad de la marca](docs/capturas/bienvenida.png)
 
@@ -338,7 +340,7 @@ Los **10 modelos** están registrados en [`backend/core/admin.py`](backend/core/
 
 ![Acción estadisticas con los datos del seed](docs/capturas/api-estadisticas.png)
 
-![Frontend Next.js de Cervecería Los Flacheros](docs/capturas/frontend.png)
+> **`frontend.png` — pendiente del frontend:** la captura de la interfaz Next.js de Ema se agregará acá cuando el frontend esté lista; por ahora se deja este texto en lugar de una imagen rota (no existe el archivo todavía).
 
 ## 11. Datos de prueba
 
@@ -352,7 +354,8 @@ uv run python manage.py createsuperuser       # usuario staff para admin y accio
 
 - `seed_datos` carga estilos, cervezas, proveedores, materias primas, clientes, lotes con etapas, pedidos con líneas y opiniones; **no** toca usuarios ni tokens.
 - `--flush` borra solo los registros de los 10 modelos del dominio (no usuarios ni tokens).
-- **Credenciales:** no se commitean secretos en el repo. El usuario staff lo creás vos con `createsuperuser` (te pide usuario, email y contraseña en la consola). Las credenciales exactas del usuario demo para la defensa se anotan fuera del repo y se documentan en la Task 27; el token siempre se pide en `POST /api/auth-token/` (ver [Autenticación por token](#7-autenticación-por-token)).
+- **Credenciales de demostración (usadas para las capturas):** superusuario `admin` con contraseña `flacheros2026`, creado con `createsuperuser` **en la base local de desarrollo** (`backend/db.sqlite3`, que está en `.gitignore` y por eso no está en el repo). El token se pide en `POST /api/auth-token/` con esas credenciales (ver [Autenticación por token](#7-autenticación-por-token)).
+- Es una **cuenta local de demostración**, no un secreto del repo: cualquiera que clone el repositorio debe crear la suya propia con `uv run python manage.py createsuperuser` sobre su base local.
 
 ## 12. Comandos útiles
 
@@ -368,12 +371,36 @@ Todos se corren desde `backend/` (excepto `docker compose`).
 | `uv run python manage.py createsuperuser` | Crea el usuario staff del admin |
 | `uv run python manage.py seed_datos [--flush]` | Carga (o recarga) datos de prueba |
 | `uv run python manage.py spectacular --validate` | Valida el esquema OpenAPI |
-| `uv run pytest` | Corre los tests (`core/tests.py`) |
+| `uv run pytest` | Corre los tests (`core/tests.py`) — hoy: **17 passed** |
 | `uv run ruff check .` | Lint |
 | `uv run ruff format .` | Formateo |
-| `docker compose up --build` | Construye y levanta `db` + `web` (Fase 6) |
+| `docker compose up --build` | Construye y levanta `db` + `web` (build pendiente de ejecutar: falta el motor Docker en la máquina de desarrollo) |
 
-## 13. Proceso del equipo (Git)
+## 13. Verificación
+
+Resultado real de la **triada de calidad** del proyecto, corrida el 19/10/2026 desde `backend/`. Esta triada es la **definición de listo** del proyecto: no se considera terminado ningún cambio que la deje en rojo.
+
+| Comando | Resultado |
+|---|---|
+| `uv run pytest -v` | **17 passed** |
+| `uv run ruff check .` | All checks passed |
+| `uv run ruff format --check .` | 23 files already formatted |
+| `uv run python manage.py check` | System check identified no issues (0 silenced) |
+| `uv run python manage.py makemigrations --check --dry-run` | No changes detected |
+| `uv run python manage.py spectacular --validate` | Esquema OpenAPI válido (0 errores, 0 warnings) |
+
+Qué cubren los 17 tests (`backend/core/tests.py`): `401` sin token, `200` con token y con sesión, estructura de paginación, datos anidados **solo en list** (lotes y pedidos), las 3 `@action` (`en_grifo`, `estadisticas` con permiso staff y `avanzar` rechazando la transición inválida con `400`), filtros y búsqueda de cervezas, permisos staff vs. mostrador, y el recálculo del `total` del pedido al modificar sus líneas.
+
+## 14. Notas de implementación
+
+Decisiones técnicas que conviene poder explicar en la defensa:
+
+- **ReDoc fijado a una build UMD (`REDOC_DIST`):** la URL "latest" que servía el CDN pasó a entregar una build solo ESM, lo que dejaba la página `/api/schema/redoc/` en blanco; fijar una versión UMD la vuelve a renderizar correctamente.
+- **`DecimalField` con `coerce_to_string=False`** en los serializers del contrato: el JSON devuelve números (`"precio": 1500.00`) en lugar de strings (`"1500.00"`), que es lo que cualquier frontend JavaScript espera y opera cómodamente.
+- **`CORS_ALLOW_CREDENTIALS` desactivado a propósito:** el frontend se autentica solo con el header `Authorization: Token`, sin cookies de sesión; al no usar credenciales cross-origin se reduce la superficie de ataque sin perder funcionalidad.
+- **`Pedido.total` es un campo guardado en la base,** no un `@property`: lo recalcula la capa de API cuando cambian las líneas del pedido (en `LineaPedidoViewSet`), lo que permite listar y ordenar por total sin agregaciones en cada request.
+
+## 15. Proceso del equipo (Git)
 
 | Qué SÍ hacemos | Qué NO hacemos |
 |---|---|
@@ -408,42 +435,40 @@ Ejemplo real de historial (`git log --oneline --graph -15`, rama `feature/fase-3
 
 Los merges `--no-ff` (`f4e8815`, `4f6948e`) dejan visible en el grafo el cierre de cada fase. **Publicación:** las ramas `feature/*` se suben al repo de GitHub como **pull requests** hacia `main` (Task 31, 1/11) y la entrega se hace con `main` al día.
 
-## 14. Estado de la entrega
+## 16. Estado de la entrega
 
-Checklist de los **21 requisitos (R1–R21)** de [`docs/08-trazabilidad-requisitos.md`](docs/08-trazabilidad-requisitos.md), con el estado actual del repo:
+Checklist de los **21 requisitos (R1–R21)** de [`docs/08-trazabilidad-requisitos.md`](docs/08-trazabilidad-requisitos.md), con el estado real al 19/10/2026 (verificación de cada uno en la sección [Verificación](#13-verificación)):
 
 **Hecho**
 
 - [x] **R1** ≥10 modelos en la base de datos (10 en `backend/core/models.py`, Tasks 7–10)
 - [x] **R2** Modelos relevantes para la temática de la cervecería
 - [x] **R3** Relaciones entre modelos (8 FK con `related_name` y `on_delete` según el negocio)
-- [x] **R4** Planificación de tablas y relaciones adjunta al README (diagrama ER en la sección 3; cierre en Task 27)
+- [x] **R4** Planificación de tablas y relaciones adjunta al README (diagrama ER en la sección 3, sincronizado con `tasks/plan.md` §7)
 - [x] **R5** API REST para comunicarse con un frontend (10 ViewSets + `DefaultRouter` en `/api/`, Tasks 14–15)
 - [x] **R6** ≥8 modelos con endpoint ViewSet (los 10, con CRUD completo)
 - [x] **R7** 2 ViewSets con datos anidados **solo en list** (`lotes/` → `etapas`, `pedidos/` → `lineas`, Task 16)
 - [x] **R8** Autenticación de sesión y por tokens (`/api/auth-token/` + `/api-auth/`, Tasks 4 y 6)
 - [x] **R9** ≥2 `@action` (las 3: `en_grifo`, `estadisticas`, `avanzar`)
 - [x] **R10** Endpoints de listado paginados (`count`/`next`/`previous`/`results`, Task 4)
-- [x] **R11** ≥1 ViewSet con filtros y búsquedas (`cervezas`: filtros + search + ordering, Task 18)
+- [x] **R11** ≥1 ViewSet con filtros y búsquedas (en realidad, varios: `cervezas`, `lotes`, `materias-primas`, `pedidos`…, Task 18)
 - [x] **R12** Documentación OpenAPI + Swagger + ReDoc + API navegable (Task 6)
 - [x] **R13** Vista principal con template de bienvenida (Task 5)
 - [x] **R14** Admin con filtros, ordenamiento, búsqueda e inlines (los 10 modelos, Tasks 12–13)
 - [x] **R15** uv como gestor de entornos (Tasks 1–2)
-- [x] **R16** CORS configurado para el frontend (`CorsMiddleware` primero, origen `http://localhost:3000`, Task 4)
-- [x] **R20** README con el diagrama ER, stack, instalación, endpoints y proceso Git (Task 30 — este archivo; las capturas se agregan en la Task 26)
+- [x] **R16** CORS configurado para el frontend (`CorsMiddleware` primero, origen `http://localhost:3000`, verificado con un preflight real, Task 19)
+- [x] **R18** Proceso Git con ramas `feature/*`, commits convencionales y merges `--no-ff` (los pull requests hacia `main` se publican con R19)
+- [x] **R20** README con diagrama ER, stack, instalación, tabla de endpoints, proceso Git **y las 9 capturas del backend** (falta solo `frontend.png`, del frontend de Ema)
 
 **Falta para el cierre**
 
-- [ ] **R17** Proyecto dockerizado: `Dockerfile` + `compose.yaml` verificados con `docker compose up --build` (Tasks 21–22)
-- [ ] **R18** Proceso Git completo: pull requests por rama y merges finales (parcial: ramas, commits convencionales y merges `--no-ff` ya hechos)
-- [ ] **R19** Repositorio publicado en GitHub con `main` al día (Task 31, 1/11)
-- [ ] **R20 (completar)** Capturas del proyecto funcionando embebidas en la sección 10 (Task 26)
+- [ ] **R17** Proyecto dockerizado: el `Dockerfile` y el `compose.yaml` **ya están escritos y validados** (`docker compose config` sin errores), pero **el build y el `docker compose up` todavía no se ejecutaron**: el motor de Docker de la máquina de desarrollo no levanta (falta WSL2). Verificación pendiente: `docker compose up --build` → `docker compose ps` en verde → admin con estilos y API en `localhost:8000`
+- [ ] **R19** Repositorio publicado en GitHub con `main` al día (Task 31, 1/11): todavía no se creó el remoto
+- [ ] **Captura `frontend.png`** embebida en la sección 10 (depende del frontend de Ema; el lugar ya está reservado en el README)
 - [ ] **R21** Entrega el lunes 2/11 y defensa el martes 3/11 (Task 28)
-- [ ] Tests de la Fase 7 (`uv run pytest`, ruff, `makemigrations --check`) en verde (Tasks 23–24)
-- [ ] Verificación final del preflight CORS (Task 19) y handoff a Ema (Task 20)
-- [ ] Nota de tarea por tarea ejecutada en `docs/tareas/` (Task 29)
+- [ ] Notas de tarea por tarea ejecutada en `docs/tareas/` (Task 29: están las T01–T11; faltan T12 en adelante)
 
-## 15. Autores
+## 17. Autores
 
 EFI de **Ingeniería de Software 2026** — Instituto Tecnológico (**ITec**). Grupo de 2 integrantes.
 
