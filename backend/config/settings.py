@@ -95,7 +95,9 @@ TIME_ZONE = "America/Argentina/Cordoba"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+# Las URLs de estáticos deben ser absolutas (con "/" inicial) para que
+# whitenoise y el `{% static %}` funcionen en cualquier ruta, no solo en la raíz.
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
@@ -108,6 +110,9 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
+        # El manifiesto exige re-correr `collectstatic` cuando se agrega un
+        # archivo estático nuevo; si no, whitenoise tira "Missing staticfiles
+        # manifest entry" y el sitio se cae.
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
@@ -123,7 +128,8 @@ REST_FRAMEWORK = {
     # Sin token no hay API: cada ViewSet afina el permiso que necesita.
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "config.settings.DefaultPagination",
-    "PAGE_SIZE": 10,
+    # Sin PAGE_SIZE acá: el tamaño de página vive en la clase DefaultPagination
+    # (page_size=10, page_size_query_param="page_size", max_page_size=50).
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",

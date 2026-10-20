@@ -27,4 +27,7 @@ urlpatterns = [
         name="redoc",
     ),
     path("api/auth-token/", obtain_auth_token, name="auth-token"),
+    # Login/logout de DRF: da botón de login en la Browsable API y demuestra
+    # que la autenticación por sesión está habilitada (no es solo teórica).
+    path("api-auth/", include("rest_framework.urls")),
 ]
