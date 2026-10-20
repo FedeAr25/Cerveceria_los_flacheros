@@ -147,6 +147,9 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API REST de gestión de cervecería artesanal.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # El "@latest" del CDN pasó a ser un bundle ESM-only y rompe el script
+    # clásico que inyecta drf-spectacular; se fija 2.5.0, última versión UMD.
+    "REDOC_DIST": "https://cdn.jsdelivr.net/npm/redoc@2.5.0",
     # Sin esto, dos choice sets que comparten nombre de campo (p. ej. "estado"
     # en Lote y Pedido) colisionan y drf-spectacular les pone nombres
     # autogenerados tipo "EstadoD9aEnum" en Swagger UI. Cada entrada
